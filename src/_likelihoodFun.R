@@ -42,7 +42,7 @@ likelihoodFun <- function(param){
     likelihood = dnorm(x=out[j], mean=S[j[,1],j[,2],i], sd=sigma, log=T)
     
     # --- account for negative infinity and combine
-    likelihood[!is.finite(likelihood)] = -10**11
+    likelihood[!is.finite(likelihood)] = -10**3
     
     L = sum(likelihood)
   }, mc.cores = numCPU)

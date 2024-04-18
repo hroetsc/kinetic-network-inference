@@ -96,6 +96,10 @@ for (r in reps) {
 # ----- OUTPUT -----
 DATA$S = S
 DATA$SIGNALMATRIX = SIGNALMATRIX
+DATA$timepoints = dimnames(S)[[1]] %>% as.numeric()
+DATA$replicates = dimnames(S)[[3]]
+DATA$species = dimnames(S)[[2]]
+DATA$reactions = rownames(A)
 
 save(DATA, file = paste0("results/graphs/",protein_name,".RData"))
 

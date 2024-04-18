@@ -27,22 +27,22 @@ plotChain <- function(chain){
   post = chain[-(1:burnIn),]
   NNN = min(c(dim(post)[1],100))
   sampledIndex = sample(c(1:dim(post)[1]),size=NNN,replace=FALSE)
-  param = post[sampledIndex,]
+  param = post[sampledIndex,-numParam]
   
   
   # ----- get simulated concentrations -----
   OUT = lapply(1:nrow(param), function(i){
     ode(func = massAction,
-        y = x0,
+        y = x0[,1],
         parms = param[i,],
-        times = tpoints)
+        times = tpoints,
+        method = "euler")
   })
   
   
   # plot diagnostics
   pdf(paste(folderN,"/residuals.pdf",sep=""), width=15, height=8)
-  par(mfrow = c(2,3))
-  
+
   # ----- posterior distributions -----
   PP = chain[-(1:burnIn),]
   colnames(PP) = paramNames
@@ -50,17 +50,16 @@ plotChain <- function(chain){
           main = "posterior parameter distribution",
           ylab = "rate",
           xlab = "parameter")
-  points(reactions$rate, col = "red", pch = 16, cex = 1.2)
   
-  
+  par(mfrow = c(2,3))
   # ----- simulated kinetics -----
   out = abind::abind(OUT, along = 3)
   
-  csim_means = apply(out, c(1,2), mean)[,species_complete]
-  csim_lower = apply(out, c(1,2), quantile, 0.05)[,species_complete]
-  csim_upper = apply(out, c(1,2), quantile, 0.95)[,species_complete]
+  csim_means = apply(out, c(1,2), mean)[,species]
+  csim_lower = apply(out, c(1,2), quantile, 0.05)[,species]
+  csim_upper = apply(out, c(1,2), quantile, 0.95)[,species]
   
-  for (i in 1:s_c) {
+  for (i in 1:length(species)) {
     
     mm = min(csim_means[,i], csim_lower[,i], csim_upper[,i])
     mm = if (mm<0 & is.finite(mm)) mm else 0
@@ -69,14 +68,17 @@ plotChain <- function(chain){
     
     plot(x = c(0,tpoints), y = c(0,csim_means[,i]),
          type = "l", ylim = l,
-         main = species_complete[i], xlab = "time (hrs)", ylab = "simulated concentration")
+         main = species[i], xlab = "time (hrs)", ylab = "simulated concentration")
     
     polygon(x = c(c(0,tpoints), rev(c(0,tpoints))),
             y = c(c(0, csim_lower[,i]), rev(c(0, csim_upper[,i]))),
             col = adjustcolor("lightgray", alpha.f = 0.5), lty = 0)
     
-    points(x = tpoints, y = X[,species_complete[i]],
-           col = "red", pch = 16, cex = 1.2)
+    for (ii in 1:length(replicates)) {
+      lines(x = tpoints, y = S[,species[i],ii],
+            type = "b", col = "red", pch = 16, cex = 1.2)
+    }
+    
   }
   
   dev.off()
