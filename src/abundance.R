@@ -17,7 +17,7 @@ substrateSeq = finalK$substrateSeq[1]
 L = nchar(substrateSeq)
 
 # TODO: better method to determine substrate degradation
-load("../../../_tools/aSPIRE+invitroSPI/results/IDH1_WT/QUANTITIES_raw.RData")
+load("data/IDH1_WT/QUANTITIES_raw.RData")
 # load("../../../aQUIRE/realData/data/substrateDegradation/DeltaC0_IDH1_221007.RData")
 
 # ----- get abundances -----

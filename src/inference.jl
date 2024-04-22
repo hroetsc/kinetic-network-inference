@@ -2,18 +2,18 @@
 # description:  run inference
 # author:       HPR
 
-using Turing, DifferentialEquations, LinearAlgebra, Sundials, StatsPlots, Random, RCall, CSV, Serialization
+using LinearAlgebra, Turing, DifferentialEquations, SciMLSensitivity, LSODA, Enzyme, StatsPlots, Random, RCall, CSV, Serialization
 
 Random.seed!(42)
 
 protein_name = "IDH1_WT"
-OUTNAME = "test_7"
+OUTNAME = "test_8"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
 
 # ----- INPUT -----
-R"load(paste0('results/graphs/IDH1_WT.RData'))"
+R"load(paste0('results/graphs/IDH1_WT.RData'))" # TODO: make protein_name variable
 @rget DATA;
 
 S = DATA[:S]
@@ -29,34 +29,22 @@ reactions = DATA[:reactions]
 s = length(species)
 r = length(reactions)
 # paramNames = [reactions; "sigma"]
-tspan = (minimum(tpoints),maximum(tpoints))
+tspan = (minimum(tp),maximum(tp))
 nr = length(replicates)
-∂t = 0.001
 
-# ----- tmp
-# # NOTE: test using small model
-# R"load('/home/hroetsc/aQUIRE-network/results/matrices/DATA_Ex2.RData')"
-# @rget DATA;
-# A = DATA[:A]
-# B = DATA[:B]
-# X = DATA[:S]
-# x0 = transpose(DATA[:x0])
-# reactions = DATA[:reactions]
-# k = reactions.rate
-# tspan = (0.0, 4.0)
-# tp = [1.0 2.0 3.0 4.0]
-# s = 13
-# r = length(k)
 
 # ----- settings -----
 # numParam = length(paramNames)
 Niter = 1
 nChains = 1
 
-mini = 0
-maxi = 1
+# TODO: different prior for on and off rates
+mini = -1
+maxi = 100
 midi = fill(0.5, r)
-sigi = fill(0.1, r)
+sigi = fill(0.5, r)
+
+p0 = rand(r)
 
 # ---- sample from prior distribution
 # FIXME / TODO
@@ -87,7 +75,9 @@ end
     k ~ Product([truncated(Normal(mu,sigma), mini, maxi) for (mu,sigma) in zip(midi,sigi)])
 
     # simulate ODE
-    predicted = solve(problem, Euler(); p=k, dt=∂t)
+    # NOTE: need to change the automatic differentiation method into something that can deal with non-pure Julia solver
+    # predicted = solve(problem, AutoTsit5(Rosenbrock23()), save_everystep = false; p=k)
+    predicted = solve(problem, lsoda(), save_everystep = false, sensealg = GaussAdjoint(); p=k)
 
     # extract only time points that are matching with (or are closest to) the real data
     closest_indices = [findmin(abs.(predicted.t .- time_point))[2] for time_point in tp]
@@ -107,6 +97,7 @@ end
     return nothing
 end
 
+# TODO: use @benchmark to find out which part is the slowest
 
 # ----- inference and diagnostic plots -----
 # ----- diagnostics
@@ -133,14 +124,12 @@ end
 
 # ----- inference
 # define model
-problem = ODEProblem(massaction!, x0, tspan, midi)
+problem = ODEProblem(massaction!, x0, tspan, p0)
 model = likelihood(S, problem)
 
 # run inference
 myChains = sample(model, NUTS(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 diagnostics_and_save(myChains)
-
-predicted = solve(problem, Euler(); p=k, dt=∂t)
 
 # repeat
 for N in 2:100
