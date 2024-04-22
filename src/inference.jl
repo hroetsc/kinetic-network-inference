@@ -2,12 +2,26 @@
 # description:  run inference
 # author:       HPR
 
-using LinearAlgebra, Turing, DifferentialEquations, SciMLSensitivity, LSODA, Enzyme, StatsPlots, Random, RCall, CSV, Serialization
+using Turing
+using DifferentialEquations
+using SciMLSensitivity
+using Sundials
+using StatsPlots
+using LinearAlgebra
+using Symbolics
+using ModelingToolkit
+using SparseArrays
+using Random
+using RCall
+using CSV
+using Serialization
+using BenchmarkTools
 
 Random.seed!(42)
+epsilon = 1e-03
 
 protein_name = "IDH1_WT"
-OUTNAME = "test_8"
+OUTNAME = "test_9"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -16,30 +30,31 @@ mkpath(folderN)
 R"load(paste0('results/graphs/IDH1_WT.RData'))" # TODO: make protein_name variable
 @rget DATA;
 
-S = DATA[:S]
-A = DATA[:A]
-B = DATA[:B]
-x0 = Array{Float64}(transpose(S[1,:,1]))
+X = Array{Union{Missing,Float64}}(DATA[:S] .+ 1)
+A = Matrix{Int64}(DATA[:A])
+B = Matrix{Int64}(DATA[:B])
+x0 = Array{Float64}(X[1,:,1])
 
-tp = DATA[:timepoints]
+tp = Vector{Float64}(DATA[:timepoints])
 replicates = DATA[:replicates]
 species = DATA[:species]
 reactions = DATA[:reactions]
 
 s = length(species)
 r = length(reactions)
-# paramNames = [reactions; "sigma"]
+paramNames = [reactions; "σ"]
 tspan = (minimum(tp),maximum(tp))
 nr = length(replicates)
+N = transpose(B-A)
 
 
 # ----- settings -----
-# numParam = length(paramNames)
+numParam = length(paramNames)
 Niter = 1
 nChains = 1
 
 # TODO: different prior for on and off rates
-mini = -1
+mini = 0
 maxi = 100
 midi = fill(0.5, r)
 sigi = fill(0.5, r)
@@ -61,11 +76,41 @@ p0 = rand(r)
 # ----- likelihood function -----
 # ----- mass action kinetics ODE
 function massaction!(du, u, p, t)
-    M = prod((u .^ A), dims=2)
-    du[1:s] = transpose(B-A)*(p .* M)
-    return nothing
+    # logx = replace!(log.(u), -Inf => 0.0)
+    u = max.(u, 1.0)
+    m = exp.(A*log.(u))
+    du[1:s] = N*Diagonal(p)*m
+    nothing
 end
 
+function jacobian!(J, u, p, t)
+    # logx = replace!(log.(u), -Inf => 0.0)
+    # M = Diagonal(exp.(A*log.(u .+ epsilon)))
+    u = max.(u, 1.0)
+    M = Diagonal(exp.(A*log.(u)))
+    J[1:s,1:s] = N*Diagonal(p)*M*A*inv(Diagonal(u))
+    nothing
+end
+
+du0 = copy(x0)
+u0 = copy(x0)
+jac_sparsity = Symbolics.jacobian_sparsity((du, u) -> massaction!(du, u, p0, 0.0), du0, u0)
+jacspy = spy(jac_sparsity,title="sparsity of Jacobian",markersize=1,colorbar=false, dpi = 600)
+savefig(jacspy, folderN*"jacobian_sparsity.png")
+
+f! = ODEFunction(massaction!, jac = jacobian!; jac_prototype = float.(jac_sparsity))
+problem_jac = ODEProblem(f!, x0, tspan, p0)
+
+@mtkbuild sys = modelingtoolkitize(problem_jac)
+problem_mtk = ODEProblem(sys, [], tspan, jac=true, sparse=true)
+
+
+initial_sol_adams = @btime solve(problem_mtk, CVODE_Adams(linear_solver=:KLU), saveat=tp; p=p0)
+plot(initial_sol_adams, title = "initial solution - CVODE_Adams")
+# initial_sol_rodas = @btime solve(problem_mtk, Rodas5P(), saveat=tp; p=p0)
+# plot(initial_sol_rodas, title = "initial solution - Rodas5P")
+# initial_sol_tmp = @btime solve(problem_mtk, Rosenbrock23(), saveat=tp; p=p0)
+# plot(initial_sol_tmp, title = "initial solution - TRBDF2")
 
 # ----- calculate likelihood
 @model function likelihood(X, problem)
@@ -73,21 +118,19 @@ end
     # priors
     Σ ~ InverseGamma(2, 3) # TODO: check for better distribution?
     k ~ Product([truncated(Normal(mu,sigma), mini, maxi) for (mu,sigma) in zip(midi,sigi)])
+    print(length(k))
 
     # simulate ODE
-    # NOTE: need to change the automatic differentiation method into something that can deal with non-pure Julia solver
-    # predicted = solve(problem, AutoTsit5(Rosenbrock23()), save_everystep = false; p=k)
-    predicted = solve(problem, lsoda(), save_everystep = false, sensealg = GaussAdjoint(); p=k)
-
-    # extract only time points that are matching with (or are closest to) the real data
-    closest_indices = [findmin(abs.(predicted.t .- time_point))[2] for time_point in tp]
-    prdct = predicted.u[closest_indices]
+    # predicted = solve(problem, Rodas5P(), progress = true, saveat=tp; p=k)
+    predicted = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tp; p=k)
+    print("prediction done")
+    # print(predicted.u)
 
     # calculate likelihood
     # iterate replicates
     for i in 1:nr
         # iterate products
-        for (ii, pred) in enumerate(prdct)
+        for (ii, pred) in enumerate(predicted)
             s = X[ii,:,i]
             k = findall(!ismissing, s) # remove missing vales
             s[k] ~ MvNormal(vec(pred)[k], Σ^2 * I)
@@ -97,7 +140,6 @@ end
     return nothing
 end
 
-# TODO: use @benchmark to find out which part is the slowest
 
 # ----- inference and diagnostic plots -----
 # ----- diagnostics
@@ -124,11 +166,11 @@ end
 
 # ----- inference
 # define model
-problem = ODEProblem(massaction!, x0, tspan, p0)
-model = likelihood(S, problem)
+model = likelihood(X, problem_jac)
 
 # run inference
-myChains = sample(model, NUTS(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+myChains = @benchmark sample(model, NUTS(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+
 diagnostics_and_save(myChains)
 
 # repeat
