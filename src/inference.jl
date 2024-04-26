@@ -16,6 +16,7 @@ using RCall
 using CSV
 using Serialization
 using BenchmarkTools
+include("_odes.jl")
 
 Random.seed!(42)
 print(Threads.nthreads())
@@ -75,23 +76,6 @@ p0 = rand(r)
 
 # ----- likelihood function -----
 # ----- mass action kinetics ODE
-function massaction!(du, u, p, t)
-    # logx = replace!(log.(u), -Inf => 0.0)
-    u = max.(u, 1.0)
-    m = exp.(A*log.(u))
-    du[1:s] = N*Diagonal(p)*m
-    nothing
-end
-
-function jacobian!(J, u, p, t)
-    # logx = replace!(log.(u), -Inf => 0.0)
-    # M = Diagonal(exp.(A*log.(u .+ epsilon)))
-    u = max.(u, 1.0)
-    M = Diagonal(exp.(A*log.(u)))
-    J[1:s,1:s] = N*Diagonal(p)*M*A*inv(Diagonal(u))
-    nothing
-end
-
 du0 = copy(x0)
 u0 = copy(x0)
 jac_sparsity = Symbolics.jacobian_sparsity((du, u) -> massaction!(du, u, p0, 0.0), du0, u0)
