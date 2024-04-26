@@ -2,9 +2,6 @@
 # description:  functions for mass action ODE and Jacobian
 # author:       HPR
 
-# FIXME: for first step use the slow implementation, then use the fast one --> otherwise wrong results!
-
-
 # ---- mass action ODE -----
 function massaction!(du, u, p, t)
     m = exp.(A*log.(u))

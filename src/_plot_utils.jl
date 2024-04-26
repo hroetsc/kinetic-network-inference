@@ -5,10 +5,10 @@
 
 include("_odes.jl")
 myquantile(A, p; dims, kwargs...) = mapslices(x->quantile(x, p; kwargs...), A; dims)
-
+myquantileslice(A, p; dims=nothing, kwargs...) = mapslices(x -> quantile(skipmissing(x), p; kwargs...), A; dims=dims)
 
 # ----- diagnostics -----
-function diagnostics_and_save_sim(myChains, problem0=problem_jac0, problem=problem_jac)
+function diagnostics_and_save_sim(myChains)
 
     # save chain
     h5open(folderN*"chain.h5", "w") do io
@@ -24,7 +24,7 @@ function diagnostics_and_save_sim(myChains, problem0=problem_jac0, problem=probl
     plot_chains_sim(myChains)
 
     # residual plots
-    plot_kinetics(myChains, problem0, problem)
+    plot_kinetics(myChains)
 
     # TODO: plot sampler https://turinglang.org/dev/docs/using-turing/sampler-viz
     # TODO: convergence criterion
@@ -61,33 +61,39 @@ end
 
 
 # ----- plot simulated concentrations -----
-function plot_kinetics(myChains, problem0, burnin=0.7)
+function plot_kinetics(myChains, burnin=0.7, steps=50)
 
     # more fine-grained time steps
-    tps = collect(range(0.0,tspan[2],50))
+    tps = collect(range(0.0,tspan[2],steps))
 
     # sample from posterior
     chains = Array(myChains)[:,2:numParam]
-    N = Int(size(chains)[1]/nChains)
-    chains = reshape(chains, N, nChains, numParam-1)
+    NI = Int(size(chains)[1]/nChains)
+    chains = reshape(chains, NI, nChains, numParam-1)
 
-    burned = Int(N*burnin)
-    k = sample(burned:N, Int(N/2))
+    burned = Int(NI*burnin)
+    k = sample(burned:NI, Int(burned/2))
     
     # simulate ODE for each particle
+    problem = ODEProblem(f0!, x0, [0.0, maximum(tp)], p)
     simulated = []
     for j in k
         for jj in 1:nChains
-            out = solve(problem0, CVODE_Adams(linear_solver=:KLU), saveat=tps; tspan=[0.0, maximum(tp)], p=vec(chains[j,jj,:]))
-            push!(simulated, mapreduce(permutedims, vcat, out))
+            out = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tps; p=vec(chains[j,jj,:])).u
+            if length(out) != steps
+                out = fill(missing, (steps,s))
+            else
+                out = mapreduce(permutedims, vcat, out)
+            end
+            push!(simulated, out)
         end
     end
-    simulated = reshape(transpose(mapreduce(permutedims, vcat, simulated)), length(tps), s, length(k)*nChains)
+    simulated = reshape(transpose(mapreduce(permutedims, vcat, simulated)), steps, s, length(k)*nChains)
 
     # get mean and quantiles
-    μ = transpose(reshape(median(simulated, dims = 3), length(tps), s))
-    q25 = transpose(reshape(myquantile(simulated, 0.25; dims=3), length(tps), s))
-    q75 = transpose(reshape(myquantile(simulated, 0.75; dims=3), length(tps), s))
+    μ = transpose(reshape(mapslices(x -> mean(skipmissing(x)), simulated, dims=3), steps, s))
+    q25 = transpose(reshape(mapslices(x -> quantile(skipmissing(x), 0.25), simulated, dims=3), steps, s))
+    q75 = transpose(reshape(mapslices(x -> quantile(skipmissing(x), 0.75), simulated, dims=3), steps, s))
     
     # plot
     rm(folderN*"residuals.pdf", force=true, recursive=true)
@@ -95,9 +101,9 @@ function plot_kinetics(myChains, problem0, burnin=0.7)
         ribbon = (q25[t,:], q75[t,:])
         
         pl = plot(tps, μ[t,:], ribbon=ribbon, fillalpha=0.3, lc=:purple, fc=:purple,
-        title = species[t], xlab = "time (hrs)", ylab = "concentration", label = "predicted", dpi = 600)
-        plot!(tp, X[:,t], label = "actual", lc=:black)
-        scatter!(tp, X[:,t], label = "actual", seriestype=:scatter, mc=:black)
+        title = species[t]*"\niterations="*string(NI), xlab = "time (hrs)", ylab = "concentration", label = "predicted", dpi = 600)
+        plot!(tporig, X[:,t], label = "actual", lc=:black)
+        scatter!(tporig, X[:,t], label = "actual", seriestype=:scatter, mc=:black)
 
         savefig(pl, "tmp.pdf")
         append_pdf!(folderN*"residuals.pdf", "tmp.pdf", create=true, cleanup=true)

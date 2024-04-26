@@ -36,7 +36,7 @@ A = Matrix{Int64}(DATA[:A])
 B = Matrix{Int64}(DATA[:B])
 x0 = Array{Float64}(X[1,:,1])
 
-tp = Vector{Float64}(DATA[:timepoints])
+tporig = Vector{Float64}(DATA[:timepoints])
 replicates = DATA[:replicates]
 species = DATA[:species]
 reactions = DATA[:reactions]

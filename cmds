@@ -1,0 +1,2 @@
+export JULIA_NUM_THREADS=28
+julia src/inference_insilico.jl |& tee out.txt 

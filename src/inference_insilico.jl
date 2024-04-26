@@ -28,7 +28,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "insilicoEX2"
-OUTNAME = "v5_SMC"
+OUTNAME = "v6_SMC"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -46,7 +46,7 @@ species = DATA[:species]
 reactions = DATA[:reactions]
 info = DATA[:info]
 p = info.rate
-tp = DATA[:tp]
+tporig = DATA[:tp]
 
 s = length(species)
 r = length(reactions)
@@ -54,9 +54,9 @@ paramNames = ["σ"; info.rate_name]
 
 t1 = 0.01
 tinit = [0.0, t1]
-tspan = [t1, maximum(tp)]
+tspan = [t1, maximum(tporig)]
 
-tp = tp[tp .> 0]
+tp = tporig[tporig .> 0]
 Xm = X[2:size(X)[1],:]
 
 N = transpose(B-A)
@@ -64,7 +64,7 @@ N = transpose(B-A)
 
 # ----- settings -----
 numParam = length(paramNames)
-Niter = 500
+Niter = 10000
 nChains = 8
 nRepeats = 10
 # noWarmup = 25
@@ -152,13 +152,13 @@ myChains = sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, sa
 diagnostics_and_save_sim(myChains)
 
 # repeat
-for N in 2:nRepeats
+for NRP in 2:nRepeats
 
     chains_reloaded = h5open(folderN*"chain.h5", "r") do io
         MCMCChainsStorage.read(io, Chains)
     end
     
-    myChains = sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
+    myChains = sample(model, SMC(), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
     diagnostics_and_save_sim(myChains)
 
 end
