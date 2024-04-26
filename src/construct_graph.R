@@ -35,21 +35,11 @@ pepTbl = finalK %>%
 # ----- graph and corresponding rates -----
 GRAPH = constructGraphNetwork(pepTbl, numCPU, Nmin, Nmax) %>%
   dplyr::mutate(reaction_ID = 1:n(),
-                rate_name = paste0("on_",reaction_ID))
+                rate_name = paste0("k_",reaction_ID))
 
-# get off rates
-OFF = GRAPH
+# no off rates
 
-nm = str_replace_all(names(GRAPH),"reactant_","x_")
-nm = str_replace_all(nm ,"product_","reactant_")
-nm = str_replace_all(nm ,"x_","product_")
-names(OFF) = nm
-
-OFF = OFF %>%
-  dplyr::mutate(rate_name = paste0("off_",reaction_ID))
-
-REACTIONS = list(GRAPH, OFF) %>%
-  rbindlist(use.names = T, fill = T) %>%
+REACTIONS = GRAPH %>%
   dplyr::arrange(reaction_ID)
 
 
@@ -87,5 +77,5 @@ DATA = list(A = A,
             finalK = finalK,
             pepTbl = pepTbl)
 
-save(DATA, file = paste0("results/graphs/",protein_name,".RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v2.RData"))
 

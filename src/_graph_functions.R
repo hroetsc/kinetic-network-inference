@@ -16,7 +16,7 @@ getAllPCPs = function(L, Nmin, Nmax, S) {
   
   # non-spliced peptides: valid combinations of P1 (C-term) and P1' (N-term)
   pcp = P1.P1_ %>%
-    dplyr::filter((P1-P1_+1) %in% seq(Nmin, Nmax))
+    dplyr::filter((P1-P1_+1) %in% seq(1, Nmax)) # allow PCPs from as short as 1 aa since they could be SRs
   
   # add the substrate as node
   sub = data.frame(P1 = L, P1_ = 1) %>%
@@ -79,10 +79,10 @@ getPositions = function(DB) {
 cleavageTemplate = function(Nmin, Nmax, L) {
   
   # 'normal'
-  cleave = lapply((2*Nmin):L, function(N) {
-    seq(Nmin,N-Nmin)
+  cleave = lapply((Nmin+1):L, function(N) {
+    seq(1,N-1)
   })
-  names(cleave) = (2*Nmin):L
+  names(cleave) = (Nmin+1):L
   
   return(cleave)
 }
@@ -110,7 +110,7 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
                   detected = P1.P1_ %in% pos$pcp$P1.P1_)
   
   longpcp = pcp %>%
-    dplyr::filter(N >= (2*Nmin) & (N <= (2*Nmax) | N == L)) %>%
+    dplyr::filter(N >= (Nmin+1) & (N <= (2*Nmax) | N == L)) %>%
     dplyr::arrange(N)  # important!!!
   cleavage_template = cleavageTemplate(Nmin,Nmax,L)
   
@@ -140,7 +140,8 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
       # reactant --> product
       PCP = data.table(cleavage_site_abs = abs_site, cleavage_site = c,
                        reactant_1 = reactant, reactant_2 = NA,
-                       reactant_1_exact = TRUE, reactant_2_exact = NA,
+                       reactant_1_valid = TRUE, reactant_2_valid = NA,
+                       product_1_valid = pcp$validLength[k1], product_2_valid = pcp$validLength[k2],
                        reactant_1_detected = reactant_detected, reactant_2_detected = NA,
                        product_1 = pcp$P1.P1_[k1], product_2 = pcp$P1.P1_[k2],
                        product_1_detected = product_detected[1], product_2_detected = product_detected[2])
@@ -175,45 +176,10 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
     ki = which(pcp$P1.P1_ == psp$SR1[k])
     kj = which(pcp$P1.P1_ == psp$SR2[k])
     
-    # --- handle cases where SR is too short
-    exactSR1 = T
-    exactSR2 = T
-    
-    # SR1
-    if (psp$N_sr1[k] < Nmin) {
-      kis = which(pcp$P1 == psp$P1[k])
-      # choose PCPs with same P1 that are detected
-      if (any(pcp$detected[kis])) {
-        kis = kis[pcp$detected[kis]]
-      }
-      # if multiple PCPs remain, choose the shortest one
-      if (length(kis) > 1) {
-        kis = kis[which.min(pcp$N[kis])]
-      }
-      
-      ki = kis
-      exactSR1 = F
-    }
-    
-    # SR2
-    if (psp$N_sr2[k] < Nmin) {
-      kjs = which(pcp$P1_ == psp$P1_[k])
-      # choose PCPs with same P1 that are detected
-      if (any(pcp$detected[kjs])) {
-        kjs = kjs[pcp$detected[kjs]]
-      }
-      # if multiple PCPs remain, choose the shortest one
-      if (length(kjs) > 1) {
-        kjs = kjs[which.min(pcp$N[kjs])]
-      }
-      
-      kj = kjs
-      exactSR2 = F
-    }
-    
     # add to results
     PSP = data.table(reactant_1 = pcp$P1.P1_[ki], reactant_2 = pcp$P1.P1_[kj],
-                     reactant_1_exact = exactSR1, reactant_2_exact = exactSR2,
+                     reactant_1_valid = pcp$validLength[ki], reactant_2_valid = pcp$validLength[kj],
+                     product_1_valid = TRUE, product_2_valid = NA,
                      reactant_1_detected = pcp$detected[ki], reactant_2_detected = pcp$detected[kj],
                      product_1 = product, product_2 = NA,
                      product_1_detected = TRUE, product_2_detected = NA)
@@ -244,14 +210,56 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
   
   
   # ----- filter PCPs -----
-  # remove not detected PCPs
   ALL = ALL %>%
-    dplyr::filter(!(productType == "PCP" & !reactant_1_detected)) %>%
-    dplyr::filter(!(productType == "PCP" & !product_1_detected & !product_2_detected))
+    dplyr::filter(!(productType == "PCP" & !reactant_1_detected)) %>% # precursor not detected
+    dplyr::filter(!(productType == "PCP" & !product_1_detected & !product_2_detected)) %>% # precursor detected, but none of the cleavage products
+    dplyr::mutate(reaction_ID = 1:n())
   
+  pcpid = pcp$P1.P1_[56]
   
-  return(ALL = ALL)
+  # remove redundant PCP reactions
+  toRemove = c()
+  for (pcpid in pcp$P1.P1_) {
+    
+    # check in which reactions the current PCP occurs as a product
+    prdct = ALL %>%
+      dplyr::filter(product_1 == pcpid | product_2 == pcpid)
+    
+    if (nrow(prdct) > 0) {
+      
+      # are both products detected in any of the reactions?
+      # any of the PCPs used for splicing ?
+      det_psp = sapply(1:nrow(prdct), function(i){
+        
+        det = prdct$product_1_detected[i] & prdct$product_2_detected[i]
+        psp = ALL %>%
+          dplyr::filter(productType == "PSP" & 
+                          (reactant_1 %in% c(prdct$product_1[i], prdct$product_2[i]) | reactant_2 %in% c(prdct$product_1[i], prdct$product_2[i]))) %>%
+          nrow()
+        
+        return(c(det,psp > 0))
+      })
+      
+      det = det_psp[1,]
+      psp = det_psp[2,]
+      
+      # if yes, keep only those reactions, as far as the other product is not used for splicing
+      if (any(det & psp)) {
+        k = which(det & psp)
+        toRemove = c(toRemove, prdct$reaction_ID[-k])
+      } else if (!any(psp) & any(det) & !all(det)) {
+        k = which(det)
+        toRemove = c(toRemove, prdct$reaction_ID[-k])
+      }
+      
+    }
+    
+  }
+  
+  ALL = ALL %>%
+    dplyr::filter(!reaction_ID %in% toRemove)
+  
+  return(ALL)  
 }
-
 
 
