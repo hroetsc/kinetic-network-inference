@@ -2,6 +2,8 @@
 # description:  get abundance of species across replicates and time points
 # author:       HPR
 
+# incorporates results from  construct_graph.R and substrate_degradation.R
+
 library(data.table)
 library(dplyr)
 library(stringr)
@@ -9,10 +11,7 @@ library(parallel)
 
 Nmin = 5
 Nmax = 40
-
 protein_name = "IDH1_WT"
-
-# TODO: incorporate results from substrate_degradation.R
 
 # ----- INPUT -----
 load(paste0("results/graphs/",protein_name,"_v2.RData"))
@@ -20,9 +19,7 @@ finalK = DATA$finalK
 substrateSeq = finalK$substrateSeq[1]
 L = nchar(substrateSeq)
 
-# TODO: better method to determine substrate degradation
-load("data/IDH1_WT/QUANTITIES_raw.RData")
-# load("../../../aQUIRE/realData/data/substrateDegradation/DeltaC0_IDH1_221007.RData")
+load(paste0("results/substrate_degradation/",protein_name,"_degradation.RData"))
 
 # ----- get abundances -----
 intTbl = finalK %>%
@@ -43,16 +40,14 @@ SIGNAL = intTbl %>%
   dplyr::select(positions, biological_replicate, digestTime, intensity) %>%
   dplyr::rename(species = positions)
 
+# sanity check
+intTbl$digestTime %>% unique()
 
 # ----- substrate degradation -----
-# TODO: smarter!
-substrate = QUANTITIES %>%
-  dplyr::ungroup() %>%
-  dplyr::filter(pepSeq == substrateSeq) %>%
-  dplyr::distinct(substrateID, pepSeq, biological_replicate, digestTime, mean_bioRep) %>%
+substrate = substrateTbl %>%
   dplyr::mutate(species = paste0("1_",L),
                 productType = "PCP") %>%
-  dplyr::rename(intensity = mean_bioRep) %>%
+  dplyr::rename(intensity = mean_int) %>%
   dplyr::mutate(digestTime = as.numeric(digestTime),
                 intensity = as.numeric(intensity)) %>%
   dplyr::mutate(intensity = log10(intensity),
@@ -98,9 +93,8 @@ SIGNAL = list(SIGNAL, missingTbl_NA, missingTbl_0) %>%
 # ----- format -----
 # array: (time, species, replicates)
 SIGNALMATRIX = SIGNAL %>%
-  tidyr::spread(digestTime, intensity, fill = NA) %>%
-  dplyr::filter(species %in% DATA$species)  # FIXME: temporary!!!
-
+  tidyr::spread(digestTime, intensity, fill = NA)
+  
 S = array(NA, dim = c(length(times), length(unique(SIGNALMATRIX$species)), length(reps)),
           dimnames = list(times, unique(SIGNALMATRIX$species), reps))
 for (r in reps) {
@@ -121,5 +115,3 @@ DATA$species = dimnames(S)[[2]]
 DATA$reactions = rownames(A)
 
 save(DATA, file = paste0("results/graphs/",protein_name,"_v2.RData"))
-
-

@@ -11,13 +11,13 @@ source("src/_graph_functions.R")
 
 Nmin = 5
 Nmax = 40
-numCPU = 2
+numCPU = 64
 
 protein_name = "IDH1_WT"
 dir.create("results/graphs/", showWarnings = F, recursive = T)
 
 # ----- INPUT -----
-finalK = fread("/Volumes/DATA16040/DATA/SPIce_QSB/QUANTITATIVE/aSPIRE-polypeptides/_INDIGO_240123/IDH1_WT/IDH1_WT_finalKinetics.csv")
+finalK = fread("data/IDH1_WT/IDH1_WT_finalKinetics.csv")
 
 # ----- preprocessing -----
 finalK = finalK %>%
@@ -29,6 +29,7 @@ pepTbl = finalK %>%
   tidyr::separate_rows(positions, sep = ";")
 
 pepTbl$positions %>% unique() %>% length()
+pepTbl$pepSeq %>% unique() %>% length()
 
 
 # ----- graph and corresponding rates -----
