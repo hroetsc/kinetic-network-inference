@@ -9,8 +9,6 @@ library(parallel)
 source("src/_utils.R")
 source("src/_graph_functions.R")
 
-# FIXME:few spliced peptides are not in the A/B matrices/reaction list!!!
-
 Nmin = 5
 Nmax = 40
 numCPU = 2
@@ -19,8 +17,7 @@ protein_name = "IDH1_WT"
 dir.create("results/graphs/", showWarnings = F, recursive = T)
 
 # ----- INPUT -----
-finalK = fread("../../../_tools/aSPIRE+invitroSPI/results/IDH1_WT/IDH1_WT_finalKinetics.csv")
-
+finalK = fread("/Volumes/DATA16040/DATA/SPIce_QSB/QUANTITATIVE/aSPIRE-polypeptides/_INDIGO_240123/IDH1_WT/IDH1_WT_finalKinetics.csv")
 
 # ----- preprocessing -----
 finalK = finalK %>%
@@ -30,6 +27,8 @@ finalK = finalK %>%
 pepTbl = finalK %>%
   dplyr::distinct(substrateID, substrateSeq, productType, pepSeq, positions) %>%
   tidyr::separate_rows(positions, sep = ";")
+
+pepTbl$positions %>% unique() %>% length()
 
 
 # ----- graph and corresponding rates -----
@@ -67,6 +66,8 @@ rownames(A) = reactions
 colnames(B) = species
 rownames(B) = reactions
 
+# sanity check
+all(pepTbl$positions %in% species)
 
 # ----- OUTPUT -----
 DATA = list(A = A,

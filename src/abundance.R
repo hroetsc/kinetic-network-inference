@@ -7,11 +7,15 @@ library(dplyr)
 library(stringr)
 library(parallel)
 
+Nmin = 5
+Nmax = 40
+
 protein_name = "IDH1_WT"
 
+# TODO: incorporate results from substrate_degradation.R
 
 # ----- INPUT -----
-load(paste0("results/graphs/",protein_name,".RData"))
+load(paste0("results/graphs/",protein_name,"_v2.RData"))
 finalK = DATA$finalK
 substrateSeq = finalK$substrateSeq[1]
 L = nchar(substrateSeq)
@@ -41,6 +45,7 @@ SIGNAL = intTbl %>%
 
 
 # ----- substrate degradation -----
+# TODO: smarter!
 substrate = QUANTITIES %>%
   dplyr::ungroup() %>%
   dplyr::filter(pepSeq == substrateSeq) %>%
@@ -59,19 +64,33 @@ SIGNAL = list(SIGNAL, substrate) %>%
   rbindlist()
 
 
-# ----- fill missing species with 0 -----
+# ----- fill missing species with N/A or 0 -----
 reps = SIGNAL$biological_replicate %>% unique()
 times = SIGNAL$digestTime %>% unique()
 
 missing = DATA$species[!DATA$species %in% unique(SIGNAL$species)]
-missingTbl = tidyr::crossing(missing,
-                             tidyr::crossing(reps, times) %>%
-                               dplyr::rename(biological_replicate = reps,
-                                             digestTime = times)) %>%
-  dplyr::rename(species = missing) %>%
+Ns = apply(str_split_fixed(missing, "_", Inf), 2, as.numeric) 
+Ns = Ns[,2]-Ns[,1]+1
+validLength = Ns >= Nmin & Ns <= Nmax
+table(validLength)
+
+
+missingTbl_NA = tidyr::crossing(missing[!validLength],
+                                tidyr::crossing(reps, times) %>%
+                                  dplyr::rename(biological_replicate = reps,
+                                                digestTime = times)) %>%
+  dplyr::rename(species = `missing[!validLength]`) %>%
+  dplyr::mutate(intensity = NA)
+
+missingTbl_0 = tidyr::crossing(missing[validLength],
+                                tidyr::crossing(reps, times) %>%
+                                  dplyr::rename(biological_replicate = reps,
+                                                digestTime = times)) %>%
+  dplyr::rename(species = `missing[validLength]`) %>%
   dplyr::mutate(intensity = 0)
 
-SIGNAL = list(SIGNAL, missingTbl) %>%
+
+SIGNAL = list(SIGNAL, missingTbl_NA, missingTbl_0) %>%
   rbindlist() %>%
   unique()
 
@@ -101,17 +120,6 @@ DATA$replicates = dimnames(S)[[3]]
 DATA$species = dimnames(S)[[2]]
 DATA$reactions = rownames(A)
 
-save(DATA, file = paste0("results/graphs/",protein_name,".RData"))
-
-
-# FIXME:few spliced peptides are not in the A/B matrices/reaction list!!!
-# sanity check
-A = DATA$A
-species = dimnames(S)[[2]]
-eulerr::euler(list(
-  A = colnames(A),
-  S = species
-)) %>%
-  plot(quantities = T)
+save(DATA, file = paste0("results/graphs/",protein_name,"_v2.RData"))
 
 
