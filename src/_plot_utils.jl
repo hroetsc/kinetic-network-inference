@@ -8,6 +8,28 @@ myquantile(A, p; dims, kwargs...) = mapslices(x->quantile(x, p; kwargs...), A; d
 myquantileslice(A, p; dims=nothing, kwargs...) = mapslices(x -> quantile(skipmissing(x), p; kwargs...), A; dims=dims)
 
 # ----- diagnostics -----
+# real data
+function diagnostics_and_save(myChains)
+
+    # save chain
+    h5open(folderN*"chain.h5", "w") do io
+        MCMCChainsStorage.write(io, myChains)
+    end
+
+    # summary stats
+    summaries, quantiles = describe(myChains)
+    CSV.write(folderN*"summary_stats.csv", summaries)
+    CSV.write(folderN*"quantiles.csv", quantiles)
+    
+    # chain plots
+    plot_chains(myChains)
+    # residual plots
+    plot_kinetics(myChains)
+
+end
+
+
+# simulated data
 function diagnostics_and_save_sim(myChains)
 
     # save chain
@@ -33,6 +55,31 @@ end
 
 
 # ----- plot chain (simulated) -----
+# real data
+function plot_chains(myChains)
+
+    # TODO: plot samples rather than entire chain
+
+    # plot
+    rm(folderN*"chain.pdf", force=true, recursive=true)
+    for i in 1:length(paramNames)
+        # density plot
+        pl1 = density(myChains[:,i,:], title = "marginal posterior "*paramNames[i], dpi = 600, legend = false,
+        linewidth = 0.5, palette=:acton10, xlabel = "parameter value", ylabel = "density")
+        
+        # chain plot
+        pl2 = plot(myChains[:,i,:], title = "chain "*paramNames[i], dpi = 600, legend = false,
+        linewidth = 0.5, palette=:acton10, xlabel = "iteration", ylabel = "parameter value")
+
+        pl = plot(pl1,pl2, layout = (1,2))
+        savefig(pl, "tmp.pdf")
+        append_pdf!(folderN*"chain.pdf", "tmp.pdf", create=true, cleanup=true)
+    end
+
+end
+
+
+# simulated data
 function plot_chains_sim(myChains)
 
     # plot
@@ -79,6 +126,7 @@ function plot_kinetics(myChains, burnin=0.7, steps=50)
     simulated = []
     for j in k
         for jj in 1:nChains
+            # FIXME: make faster!
             out = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tps; p=vec(chains[j,jj,:])).u
             if length(out) != steps
                 out = fill(missing, (steps,s))

@@ -124,8 +124,8 @@ savefig(ini, folderN*"initial_solution.png")
     k ~ Product([InverseGamma(α_k, θ_k) for i in 1:r])
 
     # simulate ODE
-    x01 = solve(problem0, CVODE_Adams(linear_solver=:KLU), saveat=t1; u0=x0, p=p)
-    predicted = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tp; u0=x01.u[2], p=p)
+    x01 = solve(problem0, CVODE_Adams(linear_solver=:KLU), saveat=t1; u0=x0, p=k)
+    predicted = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tp; u0=x01.u[2], p=k)
 
     # calculate likelihood
     for (ii, pred) in enumerate(predicted)
