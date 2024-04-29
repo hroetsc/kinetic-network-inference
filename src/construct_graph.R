@@ -17,7 +17,7 @@ Nmax = 40
 numCPU = 64
 pcp_colour = "#EC9A56"
 psp_colour = "#7B80C7"
-substrate_colour = "black"
+substrate_colour = "#6FA570"
 
 protein_name = "IDH1_WT"
 dir.create("results/graphs/", showWarnings = F, recursive = T)
@@ -69,7 +69,7 @@ grph = ggraph(coord_graph, layout = "kk") +
   ggtitle(protein_name)
 
 ggsave(paste0("results/graphs/",protein_name,"_graph.pdf"), plot = grph,
-       height = 8, width = 8, dpi = "retina")
+       height = 12, width = 12, dpi = "retina")
 
 
 # ----- matrices -----
@@ -108,5 +108,5 @@ DATA = list(A = A,
             finalK = finalK,
             pepTbl = pepTbl)
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v2-nofilter.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v2-1hop.RData"))
 

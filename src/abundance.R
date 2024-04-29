@@ -14,7 +14,7 @@ Nmax = 40
 protein_name = "IDH1_WT"
 
 # ----- INPUT -----
-load(paste0("results/graphs/",protein_name,"_v2-nofilter.RData"))
+load(paste0("results/graphs/",protein_name,"_v2-1hop.RData"))
 finalK = DATA$finalK
 substrateSeq = finalK$substrateSeq[1]
 L = nchar(substrateSeq)
@@ -105,13 +105,18 @@ for (r in reps) {
     as.matrix()
 }
 
+species = dimnames(S)[[2]]
+A = DATA$A[,species]
+B = DATA$B[,species]
 
 # ----- OUTPUT -----
 DATA$S = S
 DATA$SIGNALMATRIX = SIGNALMATRIX
 DATA$timepoints = dimnames(S)[[1]] %>% as.numeric()
 DATA$replicates = dimnames(S)[[3]]
-DATA$species = dimnames(S)[[2]]
+DATA$species = species
 DATA$reactions = rownames(A)
+DATA$A = A
+DATA$B = B
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v2-nofilter.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v2-1hop.RData"))
