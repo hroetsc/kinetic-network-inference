@@ -28,7 +28,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "insilicoEX2"
-OUTNAME = "v6_SMC"
+OUTNAME = "v8_SMC"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -64,9 +64,9 @@ N = transpose(B-A)
 
 # ----- settings -----
 numParam = length(paramNames)
-Niter = 10000
+Niter = 100000
 nChains = 8
-nRepeats = 10
+nRepeats = 3
 # noWarmup = 25
 
 α_sigma = 3
@@ -103,7 +103,7 @@ problem_jac0 = ODEProblem(f0!, x0, tinit, p)
 x01 = @btime solve(problem_jac0, CVODE_Adams(linear_solver=:KLU), saveat=t1; p=p)
 
 # all following time steps
-f! = ODEFunction(massaction!, jac = jacobian!; jac_prototype = float.(jac_sparsity))
+f! = ODEFunction(massaction_init!, jac = jacobian!; jac_prototype = float.(jac_sparsity)) # FIXME: slow version!
 problem_jac = ODEProblem(f!, x01.u[2], tspan, p)
 initial_sol = @btime solve(problem_jac, CVODE_Adams(linear_solver=:KLU), saveat=tp; p=p)
 
@@ -124,6 +124,8 @@ savefig(ini, folderN*"initial_solution.png")
     k ~ Product([InverseGamma(α_k, θ_k) for i in 1:r])
 
     # simulate ODE
+    # print(k)
+    # FIXME: condition with all > 0!
     x01 = solve(problem0, CVODE_Adams(linear_solver=:KLU), saveat=t1; u0=x0, p=k)
     predicted = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tp; u0=x01.u[2], p=k)
 

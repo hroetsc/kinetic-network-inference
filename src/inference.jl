@@ -28,14 +28,14 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "IDH1_WT"
-OUTNAME = "v1_SMC"
+OUTNAME = "v2_SMC"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
 
 
 # ----- INPUT -----
-R"load(paste0('results/graphs/IDH1_WT_v2.RData'))" # TODO: make protein_name variable
+R"load(paste0('results/graphs/IDH1_WT_v2-1hop.RData'))" # TODO: make protein_name variable
 @rget DATA;
 
 X = Array{Union{Missing,Float64}}(DATA[:S])
@@ -114,14 +114,15 @@ initial_sol = @btime solve(problem_jac, CVODE_Adams(linear_solver=:KLU), saveat=
 combined_t = vcat(x01.t, initial_sol.t)
 combined_u = mapreduce(permutedims, vcat, vcat(x01.u, initial_sol.u))
 
+tmp = mapreduce(permutedims, vcat, sol.u)
 
 
 # FIXME!
 # tmp --> find the right parameters!
-p0 = rand(Normal(100,10), r)
+p0 = rand(InverseGamma(0.5,0.5), r)
 f1! = ODEFunction(massaction_init!, jac = jacobian!; jac_prototype = float.(jac_sparsity))
 problem_jac1 = ODEProblem(f1!, x0, [0.0,4.0], p0)
-sol = solve(problem_jac1, CVODE_Adams(linear_solver=:KLU), saveat=tporig; p=p0)
+sol = @btime solve(problem_jac1, CVODE_Adams(linear_solver=:KLU), saveat=tporig; p=p0)
 plot(sol, title = "initial solution", dpi = 600)
 
 
