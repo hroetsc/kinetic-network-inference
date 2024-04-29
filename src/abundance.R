@@ -105,6 +105,7 @@ for (r in reps) {
     as.matrix()
 }
 
+# NOTE: IMPORTANT!!!!!!!!!
 species = dimnames(S)[[2]]
 A = DATA$A[,species]
 B = DATA$B[,species]
