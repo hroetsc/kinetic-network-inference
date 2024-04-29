@@ -88,6 +88,11 @@ cleavageTemplate = function(Nmin, Nmax, L) {
 }
 
 
+# ----- get adjacency matrix -----
+get_adjacency_matrix = function(tbl) {
+  
+}
+
 
 # ----- CONSTRUCT GRAPH -----
 constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
@@ -210,6 +215,10 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
   
   
   # ----- filter PCPs -----
+  # ensure that all products are connected to substrate node
+  # TODO: A^n with n<=s and A being adjacency matrix
+
+  # filter PCPs
   ALL = ALL %>%
     dplyr::filter(!(productType == "PCP" & !reactant_1_detected)) %>% # precursor not detected
     dplyr::filter(!(productType == "PCP" & !product_1_detected & !product_2_detected)) %>% # precursor detected, but none of the cleavage products
