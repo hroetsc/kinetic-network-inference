@@ -120,4 +120,4 @@ DATA$reactions = rownames(A)
 DATA$A = A
 DATA$B = B
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v2-1hop.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v3.RData"))

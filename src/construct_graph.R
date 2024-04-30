@@ -72,6 +72,7 @@ ggsave(paste0("results/graphs/",protein_name,"_graph.pdf"), plot = grph,
        height = 12, width = 12, dpi = "retina")
 
 
+
 # ----- matrices -----
 species = c(REACTIONS$reactant_1, REACTIONS$reactant_2,
             REACTIONS$product_1, REACTIONS$product_2) %>% na.omit() %>% unique()
@@ -108,5 +109,5 @@ DATA = list(A = A,
             finalK = finalK,
             pepTbl = pepTbl)
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v2-1hop.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v3.RData"))
 

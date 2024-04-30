@@ -78,11 +78,10 @@ getPositions = function(DB) {
 # ----- get PCP clevage templates -----
 cleavageTemplate = function(Nmin, Nmax, L) {
   
-  # 'normal'
-  cleave = lapply((Nmin+1):L, function(N) {
+  cleave = lapply(2:L, function(N) {
     seq(1,N-1)
   })
-  names(cleave) = (Nmin+1):L
+  names(cleave) = 2:L
   
   return(cleave)
 }
@@ -168,9 +167,9 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
     as_tibble() %>%
     dplyr::mutate(validLength = N >= Nmin & N <= Nmax,
                   detected = P1.P1_ %in% pos$pcp$P1.P1_)
+  cleavage_template = cleavageTemplate(Nmin,Nmax,L)
   
   # ----- cleave the substrate
-  cleavage_template = cleavageTemplate(Nmin,Nmax,L)
   st = 1
   en = L
   reactant = subnode
@@ -197,12 +196,17 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
     }) %>%
       rbindlist()
 
-  # ----- only direkt cleavage products of the substrate are allowed as precursors
+  # # ----- only direkt cleavage products of the substrate are allowed as precursors
+  # longpcp = pcp %>%
+  #   dplyr::filter(P1.P1_ %in% c(subnode, HOP1$product_1, HOP1$product_2)) %>%
+  #   dplyr::filter(N >= (Nmin+1) & (N <= (2*Nmax) | N == L)) %>%
+  #   dplyr::arrange(N)  # important!!!
+
   longpcp = pcp %>%
-    dplyr::filter(P1.P1_ %in% c(subnode, HOP1$product_1, HOP1$product_2)) %>%
+    dplyr::filter(detected | P1.P1_ %in% c(subnode, HOP1$product_1, HOP1$product_2)) %>%
     dplyr::filter(N >= (Nmin+1) & (N <= (2*Nmax) | N == L)) %>%
     dplyr::arrange(N)  # important!!!
-
+  
   # search for products that could result from cleavage of parental (long) PCPs
   COORD_pcp = mclapply(1:nrow(longpcp), function(k){
     
@@ -244,11 +248,7 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
   mc.preschedule = T,
   mc.cleanup = T,
   mc.cores = numCPU)
-  
-  allPCP = COORD_pcp %>%
-    data.table::rbindlist() %>%
-    as_tibble()
-  
+
   
   # ----- PSP graph -----
   psp = pos$psp %>%
@@ -283,7 +283,19 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
     data.table::rbindlist() %>%
     as_tibble()
   
-  
+  # filter out not detected PCPs that are not used for splicing
+  allPCP = COORD_pcp %>%
+    data.table::rbindlist() %>%
+    as_tibble()
+
+  allPCP = allPCP %>%
+    dplyr::mutate(product_1_sr = product_1 %in% allPSP$reactant_1,
+                  product_2_sr = product_2 %in% allPSP$reactant_2) %>%
+    dplyr::filter((product_1_detected & product_2_detected) | (product_1_sr | product_2_sr)) # NOTE: this also includes 1-hop distance nodes!
+    
+    # dplyr::filter(!((!product_1_detected & !product_1_sr & !reactant_1_hop1dist) | (!product_2_detected & !product_2_sr & !reactant_1_hop1dist)))
+    # reactant_1_hop1dist = reactant_1 %in% c(subnode, HOP1$product_1, HOP1$product_2)
+
   # ----- build adjacency list -----
   ALL = rbindlist(
     list(
@@ -297,69 +309,11 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
                   reaction_ID = 1:n()) %>%
     as.data.table()
 
+  print(paste0("number of reactions: ",nrow(ALL)))
+
   # ensure that all products are connected to substrate node
   # adjacency list
   adjList = adjacency_check(ALL, subnode)
-
-  # # ----- filter PCPs -----
-  # hop1_species = c(HOP1$reactant_1, HOP1$product_1, HOP1$product_2) %>% unique()
-  
-  # # filter PCPs
-  # ALL1 = ALL %>%
-  #   dplyr::filter(!(productType == "PCP" & !reactant_1_detected & !reactant_1 %in% hop1_species & !product_1 %in% hop1_species & !product_2 %in% hop1_species)) %>% # precursor not detected
-  #   dplyr::filter(!(productType == "PCP" & !product_1_detected & !product_2_detected & !reactant_1 %in% hop1_species & !product_1 %in% hop1_species & !product_2 %in% hop1_species)) # precursor detected, but none of the cleavage products
-  # # sanity check
-  # adjList1 = adjacency_check(ALL1)
-
-  # # remove redundant PCP reactions
-  # toRemove = c()
-  # for (pcpid in pcp$P1.P1_) {
-    
-  #   # check in which reactions the current PCP occurs as a product
-  #   prdct = ALL1 %>%
-  #     dplyr::filter(product_1 == pcpid | product_2 == pcpid)
-  #   # # check in which reactions the current PCP occurs as a reactant
-  #   # rctnt = ALL1 %>%
-  #   #   dplyr::filter(reactant_1 == pcpid | reactant_2 == pcpid)
-    
-  #   if (nrow(prdct) > 0) {
-      
-  #     # are both products detected in any of the reactions?
-  #     # any of the PCPs used for splicing ?
-
-  #     kk = sapply(1:nrow(prdct), function(i){
-
-  #       # both products observed?
-  #       k1 = prdct$product_1_detected[i] & prdct$product_2_detected[i]
-  #       # none of the reactants/products are in 1-hop distance
-  #       k2 = !prdct$hop1[i]
-  #       # used as reactant for splicing
-  #       k3 = ALL1 %>%
-  #         dplyr::filter(productType == "PSP" & 
-  #                         (reactant_1 %in% c(prdct$product_1[i], prdct$product_2[i]) | reactant_2 %in% c(prdct$product_1[i], prdct$product_2[i]))) %>%
-  #         nrow() == 0
-  #       # used as reactant for cleavage
-  #       k4 = ALL1 %>%
-  #         dplyr::filter(productType == "PCP" & 
-  #                         (reactant_1 %in% c(prdct$product_1[i],prdct$product_2[i]))) %>%
-  #         nrow() == 0
-
-  #       (k1|k3|k4) & k2
-  #     })
-      
-  #     k = which(kk)
-  #     if (length(k) > 0) {
-  #       toRemove = c(toRemove, prdct$reaction_ID[-k])
-  #       print("beepop")
-  #     }
-
-  #   }
-  # }
-
-  # ALL2 = ALL1 %>%
-  #   dplyr::filter(!reaction_ID %in% toRemove)
-  # # sanity check for connectivity
-  # adjList2 = adjacency_check(ALL2)
 
   return(ALL)
 }
