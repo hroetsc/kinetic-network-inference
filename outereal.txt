@@ -1,0 +1,5 @@
+- Project '~/kinetic-network-inference' loaded. [renv 1.0.5]
+- The project is out-of-sync -- use `renv::status()` for details.
+28Ptmux;]1337;ReportCellSize\GKS: cannot open display - headless operation mode active
+  38.501 ms (1309 allocations: 24.30 MiB)
+Sampling (2 threads)   0%|                              |  ETA: N/A
