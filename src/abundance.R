@@ -14,7 +14,7 @@ Nmax = 40
 protein_name = "IDH1_WT"
 
 # ----- INPUT -----
-load(paste0("results/graphs/",protein_name,"_v2-1hop.RData"))
+load(paste0("results/graphs/",protein_name,"_v3.RData"))
 finalK = DATA$finalK
 substrateSeq = finalK$substrateSeq[1]
 L = nchar(substrateSeq)
