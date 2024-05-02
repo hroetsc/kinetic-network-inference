@@ -29,7 +29,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "IDH1_WT"
-OUTNAME = "v4_SMC"
+OUTNAME = "v1_NUTS"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -131,10 +131,9 @@ savefig(ini, folderN*"initial_solution.png")
     
     # priors
     Σ ~ InverseGamma(α_sigma, θ_sigma) # TODO: check for better distribution?
-    k ~ Product([InverseGamma(α_k, θ_k) for i in 1:r])
+    k ~ Product([Gamma(α_k, θ_k) for i in 1:r])
 
     # simulate ODE
-    # TODO: implement try() - skip if parameters are non-valid
     predicted = solve(problem, TRBDF2(), saveat=tp; u0=x0, p=k)
     # x01 = solve(problem0, CVODE_Adams(linear_solver=:KLU), saveat=t1; u0=x0, p=k)
     # predicted = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tp; u0=x01.u[2], p=k)
@@ -160,8 +159,7 @@ end
 model = likelihood(Xm, problem_mtk)
 
 # run inference
-# benchmark = @benchmark sample(model, SMC(), MCMCThreads(), 1, 1; progress=true, save_state=true)
-# TODO: NUTS again?
+# NUTS(100, 0.65, adtype=AutoZygote())
 myChains = @time sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 diagnostics_and_save(myChains, problem_mtk)
 
