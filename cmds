@@ -1,2 +1,4 @@
 export JULIA_NUM_THREADS=28
 julia src/inference_insilico.jl |& tee out.txt 
+
+add Turing, DifferentialEquations, Zygote, Enzyme, SciMLSensitivity, Sundials, LSODA, StatsPlots, Plots, LinearAlgebra, Symbolics, ModelingToolkit, SparseArrays, Random, RCall, CSV, Serialization, BenchmarkTools, PDFmerger, DataFrames, MCMCChainsStorage, HDF5, MCMCChains, StatsBase

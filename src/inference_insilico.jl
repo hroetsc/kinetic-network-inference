@@ -28,7 +28,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "insilicoEX2"
-OUTNAME = "v8_SMC"
+OUTNAME = "v9_SMC"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -150,7 +150,7 @@ model = likelihood(Xm, problem_jac0, problem_jac)
 # myChains = sample(model, NUTS(50, 0.65, adtype=ADTypes.AutoZygote()), MCMCThreads(), 100, nChains; progress=true, save_state=true)
 
 # benchmark = @benchmark sample(model, SMC(), MCMCThreads(), 1, 1; progress=true, save_state=true)
-myChains = sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+myChains = sample(model, NUTS(), MCMCThreads(), Niter, nChains; thinning=10, progress=true, save_state=true)
 diagnostics_and_save_sim(myChains)
 
 # repeat
