@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 - Project '~/kinetic-network-inference' loaded. [renv 1.0.5]
 - The project is out-of-sync -- use `renv::status()` for details.
 28Ptmux;]1337;ReportCellSize\GKS: cannot open display - headless operation mode active
@@ -59,3 +60,10 @@ Stacktrace:
  [16] top-level scope
     @ ~/kinetic-network-inference/src/inference_insilico.jl:166
 in expression starting at /home/hroetsc/kinetic-network-inference/src/inference_insilico.jl:159
+=======
+The latest version of Julia in the `release` channel is 1.10.3+0.x64.linux.gnu. You currently have `1.10.2+0.x64.linux.gnu` installed. Run:
+
+  juliaup update
+
+in your terminal shell to install Julia 1.10.3+0.x64.linux.gnu and update the `release` channel to that version.
+>>>>>>> 2bbf7be3b037698a3ce8eb4f66c1268e65a7b7f3

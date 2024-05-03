@@ -29,7 +29,11 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "insilicoEX2"
+<<<<<<< HEAD
 OUTNAME = "v11_SMC"
+=======
+OUTNAME = "v9_SMC"
+>>>>>>> 2bbf7be3b037698a3ce8eb4f66c1268e65a7b7f3
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -149,11 +153,21 @@ end
 model_nuts = likelihood(vec(Xm), problem_0, x0)
 
 # run inference
+<<<<<<< HEAD
 # benchmark = @benchmark sample(model, SMC(), MCMCThreads(), 10, 1; progress=true, save_state=true)
 # myChains = @time sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 # myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 global myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 diagnostics_and_save_sim(myChains, problem_0)
+=======
+# FIXME: NUTS AD type --> it is messing with the solver
+# benchmark = @benchmark sample(model, SMC(), MCMCThreads(), 1, 1; progress=true, save_state=true)
+# myChains = sample(model, NUTS(50, 0.65, adtype=ADTypes.AutoZygote()), MCMCThreads(), 100, nChains; progress=true, save_state=true)
+
+# benchmark = @benchmark sample(model, SMC(), MCMCThreads(), 1, 1; progress=true, save_state=true)
+myChains = sample(model, NUTS(), MCMCThreads(), Niter, nChains; thinning=10, progress=true, save_state=true)
+diagnostics_and_save_sim(myChains)
+>>>>>>> 2bbf7be3b037698a3ce8eb4f66c1268e65a7b7f3
 
 # repeat
 for NRP in 2:nRepeats
