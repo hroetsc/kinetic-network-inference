@@ -7,7 +7,7 @@ using DifferentialEquations
 using Zygote, Enzyme
 using SciMLSensitivity
 using Sundials
-using StatsPlots
+using StatsPlots, Plots.Measures
 using LinearAlgebra
 using Symbolics
 using ModelingToolkit
@@ -68,8 +68,8 @@ x0 = MVector{s}(x0)
 
 # ----- settings -----
 numParam = length(paramNames)
-Niter = 10000
-nChains = 8
+Niter = 100000
+nChains = 3
 nRepeats = 10
 # noWarmup = 25
 
@@ -152,7 +152,7 @@ model_nuts = likelihood(vec(Xm), problem_0, x0)
 # benchmark = @benchmark sample(model, SMC(), MCMCThreads(), 10, 1; progress=true, save_state=true)
 # myChains = @time sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 # myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
-global myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 diagnostics_and_save_sim(myChains, problem_0)
 
 # repeat
@@ -162,7 +162,7 @@ for NRP in 2:nRepeats
         MCMCChainsStorage.read(io, Chains)
     end
     
-    global myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
+    myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
     diagnostics_and_save_sim(myChains, problem_0)
 
 end

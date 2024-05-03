@@ -71,7 +71,7 @@ function plot_chains(myChains, burnin=0.7)
     chains = reshape(chains, NI, nChains, numParam)
 
     burned = Int(NI*burnin)
-    k = sort(sample(burned:NI, Int((NI-burned)/2), replace=false))
+    k = sort(sample(burned:NI, Int(ceil((NI-burned)/2)), replace=false))
 
     # plot
     rm(folderN*"chain.pdf", force=true, recursive=true)
@@ -153,7 +153,7 @@ function plot_kinetics(myChains, problem, burnin=0.9, steps=10)
     chains = reshape(chains, NI, nChains, numParam-1)
 
     burned = Int(NI*burnin)
-    k = sort(sample(burned:NI, Int((NI-burned)/2), replace=false))
+    k = sort(sample(burned:NI, Int(ceil((NI-burned)/2)), replace=false))
     
     # simulate ODE for each particle
     simulated = []
