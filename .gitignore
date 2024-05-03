@@ -4,3 +4,5 @@ renv/
 tmp.png
 tmp.pdf
 Rplots.pdf
+.Renviron
+.Rprofile

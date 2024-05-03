@@ -4,17 +4,30 @@
 
 # TODO: try using mul! instead of * for matrix multiplication
 # TODO: faster way of computing x^A
+# TODO: transpose x outside of ODE
+
 
 # ---- mass action ODE -----
-# function massaction!(du, u, p, t)
-#     m = exp.(A*log.(u))
-#     du[1:s] = N*Diagonal(p)*m
-#     nothing
-# end
+function massaction!(du, u, p, t)
+    m = exp.(A*log.(u))
+    du[1:s] = N*Diagonal(p)*m
+    nothing
+end
 
-function massaction_stable!(du, u, p, t)
+function massaction_stable(du, u, p, t)
     m = prod((transpose(u) .^ A), dims=2)
     du[1:s] = N*Diagonal(p)*m
+    nothing
+end
+
+function massaction_static(du, u, p, t)
+    # NP = @MArray rand(s,r)
+    # du = @MVector rand(s)
+    NP = rand(s,r)
+    du = rand(s)
+    m = MVector{r}(prod((transpose(u) .^ A), dims=2))
+    mul!(NP, N, Diagonal(p0))
+    du[1:s] = mul!(du, NP, m)
     nothing
 end
 
@@ -30,13 +43,13 @@ end
 
 
 # ----- analytical Jacobian -----
-# function jacobian!(J, u, p, t)
-#     M = Diagonal(exp.(A*log.(u)))
-#     J[1:s,1:s] = N*Diagonal(p)*M*A*inv(Diagonal(u))
-#     nothing
-# end
+function jacobian!(J, u, p, t)
+    M = Diagonal(exp.(A*log.(u)))
+    J[1:s,1:s] = N*Diagonal(p)*M*A*inv(Diagonal(u))
+    nothing
+end
 
-function jacobian_stable!(J, u, p, t)
+function jacobian_stable(J, u, p, t)
     M = Diagonal(prod((transpose(u) .^ A), dims=2))
     J[1:s,1:s] = N*Diagonal(p)*M*A*inv(Diagonal(u))
     nothing

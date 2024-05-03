@@ -33,9 +33,10 @@ end
 
 
 # simulated data
-function diagnostics_and_save_sim(myChains)
+function diagnostics_and_save_sim(myChains, problem)
 
     # save chain
+    print("saving chain and summary stats")
     h5open(folderN*"chain.h5", "w") do io
         MCMCChainsStorage.write(io, myChains)
     end
@@ -50,7 +51,7 @@ function diagnostics_and_save_sim(myChains)
     # chain plots
     plot_chains_sim(myChains)
     # residual plots
-    plot_kinetics_sim(myChains)
+    plot_kinetics_sim(myChains, problem)
 
     # TODO: plot sampler https://turinglang.org/dev/docs/using-turing/sampler-viz
     # TODO: convergence criterion
@@ -109,7 +110,7 @@ end
 # simulated data
 function plot_chains_sim(myChains)
     
-    print("plotting chain")
+    print("plotting chain...")
     # TODO: plot samples rather than entire chain
 
     # plot
@@ -119,14 +120,14 @@ function plot_chains_sim(myChains)
         pl1 = density(myChains[:,i,:], title = "marginal posterior "*paramNames[i], dpi = 600, legend = false,
         linewidth = 0.5, palette=:acton10, xlabel = "parameter value", ylabel = "density")
         if i > 1
-            Plots.vline!(pl1, [p[i-1]], line=:dash, lc=:black)
+            Plots.vline!(pl1, [p0[i-1]], line=:dash, lc=:black)
         end
         
         # chain plot
         pl2 = plot(myChains[:,i,:], title = "chain "*paramNames[i], dpi = 600, legend = false,
         linewidth = 0.5, palette=:acton10, xlabel = "iteration", ylabel = "parameter value")
         if i > 1
-            Plots.hline!(pl2, [p[i-1]], line=:dash, lc=:black)
+            Plots.hline!(pl2, [p0[i-1]], line=:dash, lc=:black)
         end
 
         pl = plot(pl1,pl2, layout = (1,2))
@@ -159,7 +160,7 @@ function plot_kinetics(myChains, problem, burnin=0.9, steps=10)
     for j in k
         for jj in 1:nChains
             # FIXME: make faster!
-            out = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tps; p=vec(chains[j,jj,:])).u
+            out = solve(problem, TRBDF2(), saveat=tps; p=vec(chains[j,jj,:])).u
             if length(out) != steps
                 out = fill(missing, (steps,s))
             else
@@ -210,7 +211,9 @@ function plot_kinetics(myChains, problem, burnin=0.9, steps=10)
 end
 
 
-function plot_kinetics_sim(myChains, burnin=0.7, steps=50)
+function plot_kinetics_sim(myChains, problem, burnin=0.9, steps=50)
+
+    print("plotting kinetics....")
 
     # more fine-grained time steps
     tps = collect(range(0.0,tspan[2],steps))
@@ -221,26 +224,26 @@ function plot_kinetics_sim(myChains, burnin=0.7, steps=50)
     chains = reshape(chains, NI, nChains, numParam-1)
 
     burned = Int(NI*burnin)
-    k = sample(burned:NI, Int(burned/2))
-    
+    k = sort(sample(burned:NI, Int((NI-burned)/2), replace=false))
+
     # simulate ODE for each particle
-    problem = ODEProblem(f0!, x0, [0.0, maximum(tp)], p)
     simulated = []
     for j in k
         for jj in 1:nChains
             # FIXME: make faster!
-            out = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tps; p=vec(chains[j,jj,:])).u
+            prm = MVector{r}(vec(chains[j,jj,:]))
+            out = solve(problem, TRBDF2(), saveat=tps; p=prm).u
             if length(out) != steps
                 out = fill(missing, (steps,s))
             else
-                out = mapreduce(permutedims, vcat, out)
+                out = Array(mapreduce(permutedims, vcat, out))
             end
             push!(simulated, out)
         end
     end
     simulated = reshape(transpose(mapreduce(permutedims, vcat, simulated)), steps, s, length(k)*nChains)
 
-    # get mean and quantiles
+    # --- get mean and quantiles
     μ = transpose(reshape(mapslices(x -> mean(skipmissing(x)), simulated, dims=3), steps, s))
     q25 = transpose(reshape(mapslices(x -> quantile(skipmissing(x), 0.25), simulated, dims=3), steps, s))
     q75 = transpose(reshape(mapslices(x -> quantile(skipmissing(x), 0.75), simulated, dims=3), steps, s))
@@ -254,7 +257,7 @@ function plot_kinetics_sim(myChains, burnin=0.7, steps=50)
         title = species[t]*"\niterations="*string(NI), xlab = "time (hrs)", ylab = "concentration", label = "predicted", dpi = 600)
         plot!(tporig, X[:,t], label = "actual", lc=:black)
         scatter!(tporig, X[:,t], label = "actual", seriestype=:scatter, mc=:black)
-
+        
         savefig(pl, "tmp.pdf")
         append_pdf!(folderN*"residuals.pdf", "tmp.pdf", create=true, cleanup=true)
     end
