@@ -111,14 +111,18 @@ end
 function plot_chains_sim(myChains)
     
     print("plotting chain...")
+    cols = palette(:acton10,10)
     # TODO: plot samples rather than entire chain
 
     # plot
     rm(folderN*"chain.pdf", force=true, recursive=true)
     for i in 1:length(paramNames)
         # density plot
-        pl1 = density(myChains[:,i,:], title = "marginal posterior "*paramNames[i], dpi = 600, legend = false,
-        linewidth = 0.5, palette=:acton10, xlabel = "parameter value", ylabel = "density")
+        pl1 = density(myChains[1,i,:], title = "marginal posterior "*paramNames[i], dpi = 600, legend = false,
+        linewidth = 0.5, lc=cols[1], xlabel = "parameter value", ylabel = "density")
+        for ii in 2:nChains
+            density!(myChains[ii,i,:], lc=cols[ii])
+        end
         if i > 1
             Plots.vline!(pl1, [p0[i-1]], line=:dash, lc=:black)
         end

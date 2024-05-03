@@ -90,8 +90,8 @@ savefig(d, folderN*"prior.png")
 # ----- likelihood function -----
 # ----- mass action kinetics ODE
 # ----- initialise static arrays -----
-NP = @MArray rand(s,r)
-du = @MVector rand(s)
+# NP = @MArray rand(s,r)
+# du = @MVector rand(s)
 
 # --- Jacobian
 du0 = copy(x0)
