@@ -7,4 +7,4 @@ Rplots.pdf
 .Renviron
 .Rprofile
 out.txt
-out.txt
+*.txt

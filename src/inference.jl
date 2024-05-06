@@ -29,7 +29,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "IDH1_WT"
-OUTNAME = "v5_SMC"
+OUTNAME = "v2"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -39,10 +39,10 @@ mkpath(folderN)
 R"load(paste0('results/graphs/IDH1_WT_v3.RData'))" # TODO: make protein_name variable
 @rget DATA;
 
-X = Array{Union{Missing,Float64}}(DATA[:S])
+X = Array{Union{Missing,Float64}}(DATA[:S]) .+ 1
 A = Matrix{Int64}(DATA[:A])
 B = Matrix{Int64}(DATA[:B])
-x0 = Array{Float64}(coalesce.(X[1,:,1], 0.0))
+x0 = Array{Float64}(coalesce.(X[1,:,1], 1.0))
 N = transpose(B-A)
 
 species = DATA[:species]
@@ -59,33 +59,33 @@ tspan = [minimum(tporig), maximum(tporig)]
 tp = tporig[tporig .> 0]
 Xm = X[2:size(X)[1],:,:]
 
-# static (and mutable) arrays
-# Xm = SMatrix{length(tp),s}(Xm)
-# A = SMatrix{r,s}(A)
-# N = SMatrix{s,r}(N)
-# x0 = MVector{s}(x0)
+# global constants
+global m = zeros(r)
+global Au = zeros(r,s)
+global Npm = zeros(s,r)
+global Np = zeros(s,r)
 
 # ----- settings -----
 numParam = length(paramNames)
-Niter = 10000
-nChains = 3
+Niter = 100
+nChains = 1
 nRepeats = 10
 
 α_sigma = 1
 θ_sigma = 1
-α_k = 0.01
-θ_k = 5
+α_k = 3
+θ_k = 1
 
 
 # --- plot prior distributions
 d1 = StatsPlots.plot(Gamma(α_sigma,θ_sigma), legend=false, lc=:black, title = "prior σ\nα="*string(α_sigma)*", θ="*string(θ_sigma), dpi = 600)
-d2 = StatsPlots.plot(Uniform(α_k,θ_k), legend=false, lc=:black, title = "prior k\nα="*string(α_k)*", θ="*string(θ_k), xlims = (0,25), dpi = 600)
+d2 = StatsPlots.plot(Gamma(α_k,θ_k), legend=false, lc=:black, title = "prior k\nα="*string(α_k)*", θ="*string(θ_k), xlims = (0,25), dpi = 600)
 
 d = StatsPlots.plot(d1,d2, layout = (1,2))
 savefig(d, folderN*"prior.png")
 
 # sample from prior to get p0
-p0 = rand(Uniform(α_k,θ_k), r)
+p0 = rand(Gamma(α_k,θ_k), r)
 
 
 # ----- likelihood function -----
@@ -113,21 +113,22 @@ savefig(jacspy, folderN*"jacobian_sparsity.png")
 # combined_t = vcat(x01.t, initial_sol.t)
 # combined_u = mapreduce(permutedims, vcat, vcat(x01.u, initial_sol.u))
 
+
 # --- modelingtoolkit and JAC solution
-f! = ODEFunction(massaction_stable, jac = jacobian_stable; jac_prototype = float.(jac_sparsity))
+f! = ODEFunction(massaction_fast, jac = jacobian_fast; jac_prototype = float.(jac_sparsity))
 problem_jac = ODEProblem(f!, x0, tspan, p0)
-@mtkbuild sys = modelingtoolkitize(problem_jac)
-problem_mtk = ODEProblem(sys, [], tspan, jac=true, sparse=true)
+sol_jac = @btime solve(problem_jac, TRBDF2(), saveat=tporig; p=p0)
+
+# @mtkbuild sys = modelingtoolkitize(problem_jac)
+# problem_mtk = ODEProblem(sys, [], tspan, jac=true, sparse=true)
+# sol_mtk = @time solve(problem_mtk, TRBDF2(), saveat=tporig; p=p0)
 
 # --- "pure" ODE solution
-problem_0 = ODEProblem(massaction_stable, x0, tspan, p0)
+# problem_0 = ODEProblem(massaction_fast, x0, tspan, p0)
+# sol_0 = @btime solve(problem_0, TRBDF2(), saveat=tporig; p=p0)
 
 # --- plot
-# sol_0 = @btime solve(problem_0, TRBDF2(), saveat=tporig; p=p0)
-# sol_jac = @btime solve(problem_jac, TRBDF2(), saveat=tporig; p=p0)
-sol_mtk = @time solve(problem_mtk, TRBDF2(), saveat=tporig; p=p0)
-
-ini = plot(sol_mtk, title = "initial solution", dpi = 600)
+ini = plot(sol_jac, title = "initial solution", dpi = 600)
 savefig(ini, folderN*"initial_solution.png")
 
 
@@ -136,15 +137,12 @@ savefig(ini, folderN*"initial_solution.png")
     
     # priors
     Σ ~ Gamma(α_sigma, θ_sigma)
-    k ~ Product([Uniform(α_k, θ_k) for i in 1:r])
+    k ~ Product([Gamma(α_k, θ_k) for i in 1:r])
 
     # simulate ODE
     predicted = solve(problem, TRBDF2(), saveat=tp; u0=x0, p=k)
-    # x01 = solve(problem0, CVODE_Adams(linear_solver=:KLU), saveat=t1; u0=x0, p=k)
-    # predicted = solve(problem, CVODE_Adams(linear_solver=:KLU), saveat=tp; u0=x01.u[2], p=k)
 
     # calculate likelihood
-    # iterate replicates
     if predicted.retcode == ReturnCode.Success
         pred = repeat(vec(mapreduce(permutedims, vcat, predicted.u)),nr)
         Xv ~ MvNormal(pred[ki], Σ*I)
@@ -153,15 +151,6 @@ savefig(ini, folderN*"initial_solution.png")
         Turing.@addlogprob! -Inf
     end
 
-    # for i in 1:nr
-    #     # iterate products
-    #     for (ii, pred) in enumerate(predicted)
-    #         s = Xm[ii,:,i]
-    #         ki = findall(!ismissing, s) # remove missing vales
-    #         s[ki] ~ MvNormal(vec(pred)[ki], Σ^2 * I)
-    #     end
-    # end
-
     return nothing
 end
 
@@ -169,16 +158,14 @@ end
 # ----- inference and diagnostic plots -----
 # ----- inference
 # define model
-# Xv = reshape(Xm,s*length(tp),nr)
 Xv = vec(Xm)
 ki = findall(!ismissing, Xv)
 Xvv = Array{Float64}(Xv[ki])
-model = likelihood(Xvv, problem_mtk, x0)
+model = likelihood(Xvv, problem_jac, x0)
 
 # run inference
-# NUTS(100, 0.65, adtype=AutoZygote())
-myChains = @time sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
-diagnostics_and_save(myChains, problem_mtk)
+myChains = @time sample(model,  NUTS(10, 0.65, adtype=AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+diagnostics_and_save(myChains, problem_jac)
 
 # repeat
 for NRP in 2:nRepeats
@@ -187,8 +174,8 @@ for NRP in 2:nRepeats
         MCMCChainsStorage.read(io, Chains)
     end    
     
-    myChains = sample(model, SMC(), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
-    diagnostics_and_save(myChains, problem_mtk)
+    myChains = sample(model, NUTS(10, 0.65, adtype=AutoZygote()), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
+    diagnostics_and_save(myChains, problem_jac)
 
 end
 

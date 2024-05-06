@@ -20,48 +20,38 @@ function massaction_stable(du, u, p, t)
     nothing
 end
 
-function massaction_static(du, u, p, t)
-    # NP = @MArray rand(s,r)
-    # du = @MVector rand(s)
-    NP = rand(s,r)
-    du = rand(s)
-    # m = MVector{r}(prod((transpose(u) .^ A), dims=2))
-    m = prod((transpose(u) .^ A), dims=2)
-    mul!(NP, N, Diagonal(p0))
-    du[1:s] = mul!(du, NP, m)
+
+function massaction_fast(du, u, p, t, m=m, A=A, N=N)
+    u[u .< 0] .= 1.0
+    mul!(m, A, log.(u))
+    pm = p.*exp.(m)
+    mul!(du, N, pm)
     nothing
 end
 
-# function massaction_compromise!(du, u, p, t)
-#     if all(u .> 0)
-#         m = exp.(A*log.(u))
-#     else
-#         m = prod((transpose(u) .^ A), dims=2)
-#     end
-#     du[1:s] = N*Diagonal(p)*m
-#     nothing
-# end
+
 
 
 # ----- analytical Jacobian -----
 function jacobian!(J, u, p, t)
-    M = Diagonal(exp.(A*log.(u)))
+    M = Diagonal(vec(exp.(A*log.(u))))
     J[1:s,1:s] = N*Diagonal(p)*M*A*inv(Diagonal(u))
     nothing
 end
 
 function jacobian_stable(J, u, p, t)
-    M = Diagonal(prod((transpose(u) .^ A), dims=2))
+    M = Diagonal(vec(prod((transpose(u) .^ A), dims=2)))
     J[1:s,1:s] = N*Diagonal(p)*M*A*inv(Diagonal(u))
     nothing
 end
 
-# function jacobian_compromise!(J, u, p, t)
-#     if all(u .> 0)
-#         M = Diagonal(exp.(A*log.(u)))
-#     else
-#         M = Diagonal(prod((transpose(u) .^ A), dims=2))
-#     end
-#     J[1:s,1:s] = N*Diagonal(p)*M*A*inv(Diagonal(u))
-#     nothing
-# end
+
+function jacobian_fast(J, u, p, t, m=m, A=A, N=N, Np=Np, Npm=Npm, Au=Au)
+    u[u .< 0] .= 1.0
+    mul!(m, A, log.(u))
+    mul!(Np, N, Diagonal(p))
+    mul!(Npm, Np, Diagonal(exp.(m)))
+    mul!(Au, A, inv(Diagonal(u)))
+    mul!(J,Npm,Au)
+    nothing
+end
