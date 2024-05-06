@@ -12,7 +12,7 @@ myquantileslice(A, p; dims=nothing, kwargs...) = mapslices(x -> quantile(skipmis
 function diagnostics_and_save(myChains, problem)
 
     # save chain
-    print("saving chain and summary stats")
+    print("saving chain and summary stats\n")
     h5open(folderN*"chain.h5", "w") do io
         MCMCChainsStorage.write(io, myChains)
     end
@@ -36,7 +36,7 @@ end
 function diagnostics_and_save_sim(myChains, problem)
 
     # save chain
-    print("saving chain and summary stats")
+    print("saving chain and summary stats\n")
     h5open(folderN*"chain.h5", "w") do io
         MCMCChainsStorage.write(io, myChains)
     end
@@ -62,14 +62,15 @@ end
 # ----- plot chain (simulated) -----
 # real data
 function plot_chains(myChains, burnin=0.7)
+
+    print("plotting chain...\n")
+    pal = palette(:acton10, nChains+1)
     
-    print("plotting chain...")
-
     # sample from posterior
-    chains = Array(myChains)[:,1:numParam]
-    NI = Int(size(chains)[1]/nChains)
-    chains = reshape(chains, NI, nChains, numParam)
-
+    chns = Array(myChains)
+    NI = Int(size(chns)[1]/nChains)
+    chns = reshape(transpose(chns), numParam, NI, nChains)
+    
     burned = Int(NI*burnin)
     k = sort(sample(burned:NI, Int(ceil((NI-burned)/2)), replace=false))
 
@@ -87,12 +88,12 @@ function plot_chains(myChains, burnin=0.7)
         print(en)
 
         for i in counter:en
-            # density plot
-            pl1 = density(chains[k,:,i], title = "marginal posterior "*paramNames[i], dpi = 600, legend = false,
-            linewidth = 0.5, palette=:acton10, xlabel = "", ylabel = "", margin=20mm)
+            # box plot
+            pl1 = boxplot(chns[i,k,:], title = "marginal posterior "*paramNames[i]*", burnin="*string(burnin), dpi = 600, legend = false,
+            linewidth = 0.5, palette=pal, xlabel = "", ylabel = "", margin=20mm)
             # chain plot
-            pl2 = plot(chains[k,:,i], title = "chain "*paramNames[i], dpi = 600, legend = false,
-            linewidth = 0.5, palette=:acton10, xlabel = "", ylabel = "", margin=20mm)
+            pl2 = plot(myChains[:,i,:], title = "chain "*paramNames[i], dpi = 600, legend = false,
+            linewidth = 0.5, palette=pal, xlabel = "", ylabel = "", margin=20mm)
             # combine
             push!(pp, plot(pl1,pl2, layout = (1,2)))
         end
@@ -108,28 +109,32 @@ end
 
 
 # simulated data
-function plot_chains_sim(myChains)
+function plot_chains_sim(myChains, burnin=0.7)
     
-    print("plotting chain...")
-    cols = palette(:acton10,10)
-    # TODO: plot samples rather than entire chain
+    print("plotting chain...\n")
+    pal = palette(:acton10, nChains+1)
+    
+    # sample from posterior
+    chns = Array(myChains)
+    NI = Int(size(chns)[1]/nChains)
+    chns = reshape(transpose(chns), numParam, NI, nChains)
+    
+    burned = Int(NI*burnin)
+    k = sort(sample(burned:NI, Int(ceil((NI-burned)/2)), replace=false))
 
     # plot
     rm(folderN*"chain.pdf", force=true, recursive=true)
     for i in 1:length(paramNames)
-        # density plot
-        pl1 = density(myChains[1,i,:], title = "marginal posterior "*paramNames[i], dpi = 600, legend = false,
-        linewidth = 0.5, lc=cols[1], xlabel = "parameter value", ylabel = "density")
-        for ii in 2:nChains
-            density!(myChains[ii,i,:], lc=cols[ii])
-        end
+        # box plot
+        pl1 = boxplot(chns[i,k,:], title = "marginal posterior "*paramNames[i], dpi = 600, legend = false,
+        linewidth = 0.5, palette=pal, xlabel = "chain, burnin="*string(burnin), ylabel = "parameter value")
         if i > 1
-            Plots.vline!(pl1, [p0[i-1]], line=:dash, lc=:black)
+            Plots.hline!(pl1, [p0[i-1]], line=:dash, lc=:black)
         end
         
         # chain plot
         pl2 = plot(myChains[:,i,:], title = "chain "*paramNames[i], dpi = 600, legend = false,
-        linewidth = 0.5, palette=:acton10, xlabel = "iteration", ylabel = "parameter value")
+        linewidth = 0.5, palette=pal, xlabel = "iteration (no burnin)", ylabel = "parameter value")
         if i > 1
             Plots.hline!(pl2, [p0[i-1]], line=:dash, lc=:black)
         end
@@ -143,9 +148,9 @@ end
 
 
 # ----- plot simulated concentrations -----
-function plot_kinetics(myChains, problem, burnin=0.9, steps=10)
+function plot_kinetics(myChains, problem, burnin=0.7, steps=10)
 
-    print("plotting kinetics....")
+    print("plotting kinetics....\n")
     cols = palette(:starrynight,5)
 
     # more fine-grained time steps
@@ -215,16 +220,16 @@ function plot_kinetics(myChains, problem, burnin=0.9, steps=10)
 end
 
 
-function plot_kinetics_sim(myChains, problem, burnin=0.9, steps=50)
+function plot_kinetics_sim(myChains, problem, burnin=0.7, steps=50)
 
-    print("plotting kinetics....")
+    print("plotting kinetics....\n")
 
     # more fine-grained time steps
     tps = collect(range(0.0,tspan[2],steps))
 
     # sample from posterior
     chains = Array(myChains)[:,2:numParam]
-    NI = Int(size(chains)[1]/nChains)
+    NI = Int(ceil(size(chains)[1]/nChains))
     chains = reshape(chains, NI, nChains, numParam-1)
 
     burned = Int(NI*burnin)

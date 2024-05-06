@@ -29,7 +29,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "insilicoEX2"
-OUTNAME = "v11_SMC"
+OUTNAME = "v12"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -59,28 +59,28 @@ tp = tporig[tporig .> 0]
 Xm = Array{Float64}(X[2:size(X)[1],:])
 
 # static (and mutable) arrays
-Xm = SMatrix{length(tp),s}(Xm)
+# Xm = SMatrix{length(tp),s}(Xm)
 A = SMatrix{r,s}(A)
 N = SMatrix{s,r}(N)
 p0 = MVector{r}(p0)
-x0 = MVector{s}(x0)
+# x0 = MVector{s}(x0)
 
 
 # ----- settings -----
 numParam = length(paramNames)
-Niter = 100000
-nChains = 3
+Niter = 500
+nChains = 4
 nRepeats = 10
 # noWarmup = 25
 
 α_sigma = 1
 θ_sigma = 1
-α_k = 0.01
-θ_k = 5
+α_k = 3
+θ_k = 1
 
 # --- plot prior distributions
 d1 = StatsPlots.plot(Gamma(α_sigma,θ_sigma), legend=false, lc=:black, title = "prior σ\nα="*string(α_sigma)*", θ="*string(θ_sigma), dpi = 600)
-d2 = StatsPlots.plot(Uniform(α_k,θ_k), legend=false, lc=:black, title = "prior k\nα="*string(α_k)*", θ="*string(θ_k), xlims = (0,25), dpi = 600)
+d2 = StatsPlots.plot(Gamma(α_k,θ_k), legend=false, lc=:black, title = "prior k\nα="*string(α_k)*", θ="*string(θ_k), xlims = (0,25), dpi = 600)
 Plots.vline!(d2, [p0], line=:dash, lc=:red)
 
 d = StatsPlots.plot(d1,d2, layout = (1,2))
@@ -151,8 +151,9 @@ model_nuts = likelihood(vec(Xm), problem_0, x0)
 # run inference
 # benchmark = @benchmark sample(model, SMC(), MCMCThreads(), 10, 1; progress=true, save_state=true)
 # myChains = @time sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+
+myChains = @time sample(model_nuts, NUTS(10, 0.65, adtype = AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 # myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
-myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 diagnostics_and_save_sim(myChains, problem_0)
 
 # repeat
@@ -162,7 +163,7 @@ for NRP in 2:nRepeats
         MCMCChainsStorage.read(io, Chains)
     end
     
-    myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
+    myChains = @time sample(model_nuts, NUTS(10, 0.65, adtype = AutoZygote()), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
     diagnostics_and_save_sim(myChains, problem_0)
 
 end

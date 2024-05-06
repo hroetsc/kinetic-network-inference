@@ -1,45 +1,186 @@
 - Project '~/kinetic-network-inference' loaded. [renv 1.0.5]
 - The project is out-of-sync -- use `renv::status()` for details.
 28Ptmux;]1337;ReportCellSize\GKS: cannot open display - headless operation mode active
-  569.446 μs (3341 allocations: 790.11 KiB)
-Sampling (3 threads)   0%|                              |  ETA: N/A
-Sampling (3 threads)  33%|██████████                    |  ETA: 0:59:05
-Sampling (3 threads)  67%|████████████████████          |  ETA: 0:14:54
-Sampling (3 threads) 100%|██████████████████████████████| Time: 0:29:56
-Sampling (3 threads) 100%|██████████████████████████████| Time: 0:29:57
-1799.267332 seconds (1.57 G allocations: 314.767 GiB, 87.72% gc time, 3.49% compilation time: <1% of which was recompilation)
-saving chain and summary statsplotting chain...ERROR: LoadError: boundary (a,b) must have a < b
-Stacktrace:
-  [1] error(s::String)
-    @ Base ./error.jl:35
-  [2] kde_range
-    @ ~/.julia/packages/KernelDensity/XQr1u/src/univariate.jl:83 [inlined]
-  [3] #kde#1
-    @ ~/.julia/packages/KernelDensity/XQr1u/src/univariate.jl:158 [inlined]
-  [4] kde(data::AxisArrays.AxisVector{Float64, Vector{Float64}, Tuple{AxisArrays.Axis{:iter, StepRange{Int64, Int64}}}}; bandwidth::Float64, kernel::Type, npoints::Int64, boundary::Tuple{Float64, Float64}, weights::KernelDensity.UniformWeights{100000})
-    @ KernelDensity ~/.julia/packages/KernelDensity/XQr1u/src/univariate.jl:173
-  [5] #violin_coords#98
-    @ ~/.julia/packages/StatsPlots/cStOe/src/violin.jl:13 [inlined]
-  [6] macro expansion
-    @ ~/.julia/packages/StatsPlots/cStOe/src/hist.jl:13 [inlined]
-  [7] apply_recipe(plotattributes::AbstractDict{Symbol, Any}, ::Type{Val{:density}}, x::Any, y::Any, z::Any)
-    @ StatsPlots ~/.julia/packages/RecipesBase/BRe07/src/RecipesBase.jl:300
-  [8] _process_seriesrecipe(plt::Any, plotattributes::Any)
-    @ RecipesPipeline ~/.julia/packages/RecipesPipeline/BGM3l/src/series_recipe.jl:50
-  [9] _process_seriesrecipes!(plt::Any, kw_list::Any)
-    @ RecipesPipeline ~/.julia/packages/RecipesPipeline/BGM3l/src/series_recipe.jl:27
- [10] recipe_pipeline!(plt::Any, plotattributes::Any, args::Any)
-    @ RecipesPipeline ~/.julia/packages/RecipesPipeline/BGM3l/src/RecipesPipeline.jl:99
- [11] _plot!(plt::Plots.Plot, plotattributes::Any, args::Any)
-    @ Plots ~/.julia/packages/Plots/ju9dp/src/plot.jl:223
- [12] plot(args::Any; kw...)
-    @ Plots ~/.julia/packages/Plots/ju9dp/src/plot.jl:102
- [13] density(args::Any; kw...)
-    @ Plots ~/.julia/packages/RecipesBase/BRe07/src/RecipesBase.jl:427
- [14] plot_chains_sim(myChains::Chains{Float64, AxisArrays.AxisArray{Float64, 3, Array{Float64, 3}, Tuple{AxisArrays.Axis{:iter, StepRange{Int64, Int64}}, AxisArrays.Axis{:var, Vector{Symbol}}, AxisArrays.Axis{:chain, UnitRange{Int64}}}}, Missing, @NamedTuple{parameters::Vector{Symbol}, internals::Vector{Symbol}}, @NamedTuple{varname_to_symbol::OrderedCollections.OrderedDict{AbstractPPL.VarName, Symbol}, model::DynamicPPL.Model{typeof(likelihood), (:Xv, :problem, :x0, :α_sigma, :θ_sigma, :α_k, :θ_k), (), (), Tuple{SVector{52, Float64}, ODEProblem{MVector{13, Float64}, Tuple{Float64, Float64}, true, MVector{7, Float64}, ODEFunction{true, SciMLBase.AutoSpecialize, typeof(massaction_stable), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing, Nothing, Nothing, Nothing}, @Kwargs{}, SciMLBase.StandardODEProblem}, MVector{13, Float64}, Int64, Int64, Float64, Int64}, Tuple{}, DynamicPPL.DefaultContext}, sampler::DynamicPPL.Sampler{SMC{(), AdvancedPS.ResampleWithESSThreshold{typeof(AdvancedPS.resample_systematic), Float64}}}, samplerstate::Turing.Inference.SMCState{AdvancedPS.ParticleContainer{AdvancedPS.Trace{AdvancedPS.LibtaskModel{Turing.Essential.TracedModel{AbstractMCMC.AbstractSampler, DynamicPPL.AbstractVarInfo, DynamicPPL.Model, Tuple}, TapedTask{typeof(likelihood), Tuple{DynamicPPL.Model{typeof(likelihood), (:Xv, :problem, :x0, :α_sigma, :θ_sigma, :α_k, :θ_k), (), (), Tuple{SVector{52, Float64}, ODEProblem{MVector{13, Float64}, Tuple{Float64, Float64}, true, MVector{7, Float64}, ODEFunction{true, SciMLBase.AutoSpecialize, typeof(massaction_stable), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing, Nothing, Nothing, Nothing}, @Kwargs{}, SciMLBase.StandardODEProblem}, MVector{13, Float64}, Int64, Int64, Float64, Int64}, Tuple{}, DynamicPPL.DefaultContext}, DynamicPPL.TypedVarInfo{@NamedTuple{Σ::DynamicPPL.Metadata{Dict{AbstractPPL.VarName{:Σ, Setfield.IdentityLens}, Int64}, Vector{Gamma{Float64}}, Vector{AbstractPPL.VarName{:Σ, Setfield.IdentityLens}}, Vector{Float64}, Vector{Set{DynamicPPL.Selector}}}, k::DynamicPPL.Metadata{Dict{AbstractPPL.VarName{:k, Setfield.IdentityLens}, Int64}, Vector{Product{Continuous, Uniform{Float64}, Vector{Uniform{Float64}}}}, Vector{AbstractPPL.VarName{:k, Setfield.IdentityLens}}, Vector{Float64}, Vector{Set{DynamicPPL.Selector}}}}, Float64}, DynamicPPL.SamplingContext{DynamicPPL.Sampler{SMC{(), AdvancedPS.ResampleWithESSThreshold{typeof(AdvancedPS.resample_systematic), Float64}}}, DynamicPPL.DefaultContext, AdvancedPS.TracedRNG{UInt64, 1, Random123.Philox2x{UInt64, 10}}}, SVector{52, Float64}, ODEProblem{MVector{13, Float64}, Tuple{Float64, Float64}, true, MVector{7, Float64}, ODEFunction{true, SciMLBase.AutoSpecialize, typeof(massaction_stable), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing, Nothing, Nothing, Nothing}, @Kwargs{}, SciMLBase.StandardODEProblem}, MVector{13, Float64}, Int64, Int64, Float64, Int64}}}, AdvancedPS.TracedRNG{UInt64, 1, Random123.Philox2x{UInt64, 10}}}, AdvancedPS.TracedRNG{UInt64, 1, Random123.Philox2x{UInt64, 10}}}, Float64}, start_time::Vector{Float64}, stop_time::Vector{Float64}}})
-    @ Main ~/kinetic-network-inference/src/_plot_utils.jl:120
- [15] diagnostics_and_save_sim(myChains::Chains{Float64, AxisArrays.AxisArray{Float64, 3, Array{Float64, 3}, Tuple{AxisArrays.Axis{:iter, StepRange{Int64, Int64}}, AxisArrays.Axis{:var, Vector{Symbol}}, AxisArrays.Axis{:chain, UnitRange{Int64}}}}, Missing, @NamedTuple{parameters::Vector{Symbol}, internals::Vector{Symbol}}, @NamedTuple{varname_to_symbol::OrderedCollections.OrderedDict{AbstractPPL.VarName, Symbol}, model::DynamicPPL.Model{typeof(likelihood), (:Xv, :problem, :x0, :α_sigma, :θ_sigma, :α_k, :θ_k), (), (), Tuple{SVector{52, Float64}, ODEProblem{MVector{13, Float64}, Tuple{Float64, Float64}, true, MVector{7, Float64}, ODEFunction{true, SciMLBase.AutoSpecialize, typeof(massaction_stable), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing, Nothing, Nothing, Nothing}, @Kwargs{}, SciMLBase.StandardODEProblem}, MVector{13, Float64}, Int64, Int64, Float64, Int64}, Tuple{}, DynamicPPL.DefaultContext}, sampler::DynamicPPL.Sampler{SMC{(), AdvancedPS.ResampleWithESSThreshold{typeof(AdvancedPS.resample_systematic), Float64}}}, samplerstate::Turing.Inference.SMCState{AdvancedPS.ParticleContainer{AdvancedPS.Trace{AdvancedPS.LibtaskModel{Turing.Essential.TracedModel{AbstractMCMC.AbstractSampler, DynamicPPL.AbstractVarInfo, DynamicPPL.Model, Tuple}, TapedTask{typeof(likelihood), Tuple{DynamicPPL.Model{typeof(likelihood), (:Xv, :problem, :x0, :α_sigma, :θ_sigma, :α_k, :θ_k), (), (), Tuple{SVector{52, Float64}, ODEProblem{MVector{13, Float64}, Tuple{Float64, Float64}, true, MVector{7, Float64}, ODEFunction{true, SciMLBase.AutoSpecialize, typeof(massaction_stable), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing, Nothing, Nothing, Nothing}, @Kwargs{}, SciMLBase.StandardODEProblem}, MVector{13, Float64}, Int64, Int64, Float64, Int64}, Tuple{}, DynamicPPL.DefaultContext}, DynamicPPL.TypedVarInfo{@NamedTuple{Σ::DynamicPPL.Metadata{Dict{AbstractPPL.VarName{:Σ, Setfield.IdentityLens}, Int64}, Vector{Gamma{Float64}}, Vector{AbstractPPL.VarName{:Σ, Setfield.IdentityLens}}, Vector{Float64}, Vector{Set{DynamicPPL.Selector}}}, k::DynamicPPL.Metadata{Dict{AbstractPPL.VarName{:k, Setfield.IdentityLens}, Int64}, Vector{Product{Continuous, Uniform{Float64}, Vector{Uniform{Float64}}}}, Vector{AbstractPPL.VarName{:k, Setfield.IdentityLens}}, Vector{Float64}, Vector{Set{DynamicPPL.Selector}}}}, Float64}, DynamicPPL.SamplingContext{DynamicPPL.Sampler{SMC{(), AdvancedPS.ResampleWithESSThreshold{typeof(AdvancedPS.resample_systematic), Float64}}}, DynamicPPL.DefaultContext, AdvancedPS.TracedRNG{UInt64, 1, Random123.Philox2x{UInt64, 10}}}, SVector{52, Float64}, ODEProblem{MVector{13, Float64}, Tuple{Float64, Float64}, true, MVector{7, Float64}, ODEFunction{true, SciMLBase.AutoSpecialize, typeof(massaction_stable), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing, Nothing, Nothing, Nothing}, @Kwargs{}, SciMLBase.StandardODEProblem}, MVector{13, Float64}, Int64, Int64, Float64, Int64}}}, AdvancedPS.TracedRNG{UInt64, 1, Random123.Philox2x{UInt64, 10}}}, AdvancedPS.TracedRNG{UInt64, 1, Random123.Philox2x{UInt64, 10}}}, Float64}, start_time::Vector{Float64}, stop_time::Vector{Float64}}}, problem::ODEProblem{MVector{13, Float64}, Tuple{Float64, Float64}, true, MVector{7, Float64}, ODEFunction{true, SciMLBase.AutoSpecialize, typeof(massaction_stable), UniformScaling{Bool}, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, typeof(SciMLBase.DEFAULT_OBSERVED), Nothing, Nothing, Nothing, Nothing}, @Kwargs{}, SciMLBase.StandardODEProblem})
-    @ Main ~/kinetic-network-inference/src/_plot_utils.jl:52
- [16] top-level scope
-    @ ~/kinetic-network-inference/src/inference_insilico.jl:156
-in expression starting at /home/hroetsc/kinetic-network-inference/src/inference_insilico.jl:156
+  330.395 μs (3418 allocations: 789.44 KiB)
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:06:04
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:01
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:44
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:02:12
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:02:12
+135.011079 seconds (435.25 M allocations: 145.274 GiB, 7.21% gc time, 284.24% compilation time: <1% of which was recompilation)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+┌ Warning: Assignment to `myChains` in soft scope is ambiguous because a global variable by the same name exists: `myChains` will be treated as a new local. Disambiguate by using `local myChains` to suppress this warning or `global myChains` to assign to the existing global variable.
+└ @ timing.jl:269
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.05
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:02:08
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:00:51
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:24
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:01:15
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:01:15
+ 75.520477 seconds (429.93 M allocations: 264.862 GiB, 16.53% gc time, 5.25% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:03:11
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:01:13
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:29
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:01:38
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:01:38
+ 98.802749 seconds (584.65 M allocations: 345.159 GiB, 16.42% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.05
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.025
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:04:11
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:01:43
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:35
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:38
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:38
+218.469572 seconds (950.99 M allocations: 559.564 GiB, 13.12% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:05:06
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:01:50
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:42
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:02:25
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:02:25
+145.254639 seconds (879.24 M allocations: 511.805 GiB, 16.48% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:08:30
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:54
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:03
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:15
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:15
+195.444883 seconds (1.31 G allocations: 764.004 GiB, 17.99% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.05
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:06:45
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:37
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:03
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:11
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:11
+191.337193 seconds (1.19 G allocations: 716.490 GiB, 17.43% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.05
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.05
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:06:46
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:20
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:51
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:23
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:23
+203.811612 seconds (1.14 G allocations: 682.758 GiB, 15.68% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.05
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:06:58
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:45
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:23
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:04:14
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:04:14
+254.501928 seconds (1.50 G allocations: 878.306 GiB, 15.66% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:10:01
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:04:38
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:35
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:05:19
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:05:19
+319.010808 seconds (1.95 G allocations: 1.121 TiB, 16.46% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
