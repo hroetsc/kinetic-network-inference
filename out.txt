@@ -1,42 +1,278 @@
 - Project '~/kinetic-network-inference' loaded. [renv 1.0.5]
 - The project is out-of-sync -- use `renv::status()` for details.
 28Ptmux;]1337;ReportCellSize\GKS: cannot open display - headless operation mode active
-  330.395 μs (3418 allocations: 789.44 KiB)
+  333.787 μs (3418 allocations: 789.44 KiB)
 Sampling (4 threads)   0%|                              |  ETA: N/A
 ┌ Info: Found initial step size
-└   ϵ = 0.025
-┌ Info: Found initial step size
-└   ϵ = 0.0125
-┌ Info: Found initial step size
-└   ϵ = 0.0125
+└   ϵ = 0.00625
 ┌ Info: Found initial step size
 └   ϵ = 0.00625
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:06:04
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:01
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:44
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:02:12
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:02:12
-135.011079 seconds (435.25 M allocations: 145.274 GiB, 7.21% gc time, 284.24% compilation time: <1% of which was recompilation)
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:07:50
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:37
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:01
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:55
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:55
+237.685915 seconds (707.66 M allocations: 352.123 GiB, 9.42% gc time, 159.08% compilation time: <1% of which was recompilation)
 saving chain and summary stats
 plotting chain...
 plotting kinetics....
 ┌ Warning: Assignment to `myChains` in soft scope is ambiguous because a global variable by the same name exists: `myChains` will be treated as a new local. Disambiguate by using `local myChains` to suppress this warning or `global myChains` to assign to the existing global variable.
 └ @ timing.jl:269
 Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Warning: Instability detected. Aborting
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:623
+
+whoopsidupsi┌ Warning: Instability detected. Aborting
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:623
+
+whoopsidupsi┌ Warning: Instability detected. Aborting
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:623
+┌ Warning: Instability detected. Aborting
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:623
+
+whoopsidupsi
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.0125
 ┌ Info: Found initial step size
-└   ϵ = 0.05
+└   ϵ = 0.0125
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.003125
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:07:31
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:34
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:11
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:05:30
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:05:30
+330.791371 seconds (1.23 G allocations: 627.258 GiB, 10.07% gc time, 1.81% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:10:40
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:04:41
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:47
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:05:36
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:05:36
+336.175599 seconds (1.70 G allocations: 851.308 GiB, 12.81% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.003125
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:17:48
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:06:24
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:02:08
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:15:27
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:15:27
+927.420745 seconds (3.28 G allocations: 1.602 TiB, 9.12% gc time, 0.00% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
 ┌ Info: Found initial step size
 └   ϵ = 0.025
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:12:39
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:05:45
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:02:32
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:11:12
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:11:12
+672.688006 seconds (2.46 G allocations: 1.320 TiB, 10.04% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
 ┌ Info: Found initial step size
 └   ϵ = 0.025
 ┌ Info: Found initial step size
 └   ϵ = 0.0125
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:02:08
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:00:51
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:24
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:01:15
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:01:15
- 75.520477 seconds (429.93 M allocations: 264.862 GiB, 16.53% gc time, 5.25% compilation time)
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:15:18
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:05:43
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:02:15
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:08:16
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:08:16
+496.826010 seconds (1.95 G allocations: 1.099 TiB, 10.52% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:17:27
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:10:26
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:04:04
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:15:02
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:15:02
+902.248234 seconds (3.29 G allocations: 2.150 TiB, 11.17% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Warning: Instability detected. Aborting
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:623
+
+whoopsidupsi┌ Warning: Instability detected. Aborting
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:623
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Info: Found initial step size
+└   ϵ = 0.025
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.00625
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.003125
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:19:45
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:06:46
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:03:19
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:11:36
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:11:36
+696.685247 seconds (2.87 G allocations: 1.525 TiB, 10.75% gc time, 0.01% compilation time)
+saving chain and summary stats
+plotting chain...
+plotting kinetics....
+Sampling (4 threads)   0%|                              |  ETA: N/A
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Info: Found initial step size
+└   ϵ = 0.0125
+┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Warning: Interrupted. Larger maxiters is needed. If you are using an integrator for non-stiff ODEs or an automatic switching algorithm (the default), you may want to consider using a method for stiff equations. See the solver pages for more details (e.g. https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Stiff-Problems).
+└ @ SciMLBase ~/miniconda3/envs/julia_env/share/julia/packages/SciMLBase/dbEar/src/integrator_interface.jl:597
+
+whoopsidupsi┌ Info: Found initial step size
+└   ϵ = 0.00625
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:25:35
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:08:35
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:02:56
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:11:38
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:11:38
+698.880165 seconds (3.07 G allocations: 1.629 TiB, 11.41% gc time, 0.01% compilation time)
 saving chain and summary stats
 plotting chain...
 plotting kinetics....
@@ -48,139 +284,13 @@ Sampling (4 threads)   0%|                              |  ETA: N/A
 ┌ Info: Found initial step size
 └   ϵ = 0.025
 ┌ Info: Found initial step size
-└   ϵ = 0.0125
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:03:11
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:01:13
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:29
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:01:38
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:01:38
- 98.802749 seconds (584.65 M allocations: 345.159 GiB, 16.42% gc time, 0.01% compilation time)
-saving chain and summary stats
-plotting chain...
-plotting kinetics....
-Sampling (4 threads)   0%|                              |  ETA: N/A
-┌ Info: Found initial step size
-└   ϵ = 0.05
-┌ Info: Found initial step size
-└   ϵ = 0.0125
-┌ Info: Found initial step size
-└   ϵ = 0.0125
-┌ Info: Found initial step size
 └   ϵ = 0.025
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:04:11
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:01:43
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:35
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:38
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:38
-218.469572 seconds (950.99 M allocations: 559.564 GiB, 13.12% gc time, 0.01% compilation time)
-saving chain and summary stats
-plotting chain...
-plotting kinetics....
-Sampling (4 threads)   0%|                              |  ETA: N/A
-┌ Info: Found initial step size
-└   ϵ = 0.0125
-┌ Info: Found initial step size
-└   ϵ = 0.0125
-┌ Info: Found initial step size
-└   ϵ = 0.025
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:05:06
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:01:50
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:42
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:02:25
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:02:25
-145.254639 seconds (879.24 M allocations: 511.805 GiB, 16.48% gc time, 0.01% compilation time)
-saving chain and summary stats
-plotting chain...
-plotting kinetics....
-Sampling (4 threads)   0%|                              |  ETA: N/A
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-┌ Info: Found initial step size
-└   ϵ = 0.0125
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:08:30
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:54
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:03
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:15
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:15
-195.444883 seconds (1.31 G allocations: 764.004 GiB, 17.99% gc time, 0.01% compilation time)
-saving chain and summary stats
-plotting chain...
-plotting kinetics....
-Sampling (4 threads)   0%|                              |  ETA: N/A
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-┌ Info: Found initial step size
-└   ϵ = 0.05
-┌ Info: Found initial step size
-└   ϵ = 0.025
-┌ Info: Found initial step size
-└   ϵ = 0.0125
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:06:45
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:37
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:03
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:11
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:11
-191.337193 seconds (1.19 G allocations: 716.490 GiB, 17.43% gc time, 0.01% compilation time)
-saving chain and summary stats
-plotting chain...
-plotting kinetics....
-Sampling (4 threads)   0%|                              |  ETA: N/A
-┌ Info: Found initial step size
-└   ϵ = 0.05
-┌ Info: Found initial step size
-└   ϵ = 0.025
-┌ Info: Found initial step size
-└   ϵ = 0.05
-┌ Info: Found initial step size
-└   ϵ = 0.0125
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:06:46
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:20
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:00:51
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:23
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:03:23
-203.811612 seconds (1.14 G allocations: 682.758 GiB, 15.68% gc time, 0.01% compilation time)
-saving chain and summary stats
-plotting chain...
-plotting kinetics....
-Sampling (4 threads)   0%|                              |  ETA: N/A
-┌ Info: Found initial step size
-└   ϵ = 0.05
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-┌ Info: Found initial step size
-└   ϵ = 0.025
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:06:58
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:02:45
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:23
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:04:14
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:04:14
-254.501928 seconds (1.50 G allocations: 878.306 GiB, 15.66% gc time, 0.01% compilation time)
-saving chain and summary stats
-plotting chain...
-plotting kinetics....
-Sampling (4 threads)   0%|                              |  ETA: N/A
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-┌ Info: Found initial step size
-└   ϵ = 0.025
-┌ Info: Found initial step size
-└   ϵ = 0.00625
-Sampling (4 threads)  25%|███████▌                      |  ETA: 0:10:01
-Sampling (4 threads)  50%|███████████████               |  ETA: 0:04:38
-Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:01:35
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:05:19
-Sampling (4 threads) 100%|██████████████████████████████| Time: 0:05:19
-319.010808 seconds (1.95 G allocations: 1.121 TiB, 16.46% gc time, 0.01% compilation time)
+Sampling (4 threads)  25%|███████▌                      |  ETA: 0:23:08
+Sampling (4 threads)  50%|███████████████               |  ETA: 0:08:02
+Sampling (4 threads)  75%|██████████████████████▌       |  ETA: 0:02:43
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:09:34
+Sampling (4 threads) 100%|██████████████████████████████| Time: 0:09:34
+574.501574 seconds (2.52 G allocations: 1.461 TiB, 11.77% gc time, 0.01% compilation time)
 saving chain and summary stats
 plotting chain...
 plotting kinetics....

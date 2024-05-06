@@ -29,7 +29,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "insilicoEX2"
-OUTNAME = "v12"
+OUTNAME = "v13"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -68,7 +68,7 @@ p0 = MVector{r}(p0)
 
 # ----- settings -----
 numParam = length(paramNames)
-Niter = 500
+Niter = 1000
 nChains = 4
 nRepeats = 10
 # noWarmup = 25
@@ -122,7 +122,7 @@ savefig(ini, folderN*"initial_solution.png")
     
     # priors
     Σ ~ Gamma(α_sigma, θ_sigma)
-    k ~ Product([Uniform(α_k, θ_k) for i in 1:r])
+    k ~ Product([Gamma(α_k, θ_k) for i in 1:r])
 
     # simulate ODE
     predicted = solve(problem, TRBDF2(), saveat=tp; u0=x0, p=k)
