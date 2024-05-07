@@ -9,8 +9,7 @@ using SciMLSensitivity
 using Sundials
 using StatsPlots, Plots.Measures
 using LinearAlgebra
-using Symbolics
-using ModelingToolkit
+using ModelingToolkit, Symbolics
 using SparseArrays
 using Random
 using RCall
@@ -29,7 +28,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "IDH1_WT"
-OUTNAME = "v2"
+OUTNAME = "NUTS_v1"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -67,8 +66,8 @@ global Np = zeros(s,r)
 
 # ----- settings -----
 numParam = length(paramNames)
-Niter = 100
-nChains = 1
+Niter = 10
+nChains = 3
 nRepeats = 10
 
 α_sigma = 1
@@ -115,25 +114,34 @@ savefig(jacspy, folderN*"jacobian_sparsity.png")
 
 
 # --- modelingtoolkit and JAC solution
-f! = ODEFunction(massaction_fast, jac = jacobian_fast; jac_prototype = float.(jac_sparsity))
-problem_jac = ODEProblem(f!, x0, tspan, p0)
-sol_jac = @btime solve(problem_jac, TRBDF2(), saveat=tporig; p=p0)
+# f! = ODEFunction(massaction_fast, jac = jacobian_fast; jac_prototype = float.(jac_sparsity))
+# problem_jac = ODEProblem(f!, x0, tspan, p0)
+# sol_jac = @btime solve(problem_jac, TRBDF2(), saveat=tporig; p=p0)
 
 # @mtkbuild sys = modelingtoolkitize(problem_jac)
 # problem_mtk = ODEProblem(sys, [], tspan, jac=true, sparse=true)
-# sol_mtk = @time solve(problem_mtk, TRBDF2(), saveat=tporig; p=p0)
+
+fhvy! = ODEFunction(massaction_stable, jac = jacobian_fast; jac_prototype = float.(jac_sparsity))
+problem_jachvy = ODEProblem(fhvy!, x0, tspan, p0)
+@mtkbuild sys = modelingtoolkitize(problem_jachvy)
+problem_mtk = ODEProblem(sys, [], tspan, jac=true, sparse=true)
+sol_mtk = @btime solve(problem_mtk, TRBDF2(), saveat=tporig; p=p0)
+
+
+problem = problem_mtk
+
 
 # --- "pure" ODE solution
 # problem_0 = ODEProblem(massaction_fast, x0, tspan, p0)
 # sol_0 = @btime solve(problem_0, TRBDF2(), saveat=tporig; p=p0)
 
 # --- plot
-ini = plot(sol_jac, title = "initial solution", dpi = 600)
+ini = plot(sol_mtk, title = "initial solution", dpi = 600)
 savefig(ini, folderN*"initial_solution.png")
 
 
 # ----- calculate likelihood
-@model function likelihood(Xv, problem, x0, α_sigma=α_sigma, θ_sigma=θ_sigma, α_k=α_k, θ_k=θ_k)
+@model function likelihood(Xv, problem, x0, ki=ki, α_sigma=α_sigma, θ_sigma=θ_sigma, α_k=α_k, θ_k=θ_k)
     
     # priors
     Σ ~ Gamma(α_sigma, θ_sigma)
@@ -161,11 +169,12 @@ end
 Xv = vec(Xm)
 ki = findall(!ismissing, Xv)
 Xvv = Array{Float64}(Xv[ki])
-model = likelihood(Xvv, problem_jac, x0)
+model = likelihood(Xvv, problem, x0)
 
 # run inference
-myChains = @time sample(model,  NUTS(10, 0.65, adtype=AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
-diagnostics_and_save(myChains, problem_jac)
+# myChains = @time sample(model,  MH(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+myChains = @time sample(model,  NUTS(1, 0.65, adtype=AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+diagnostics_and_save(myChains, problem)
 
 # repeat
 for NRP in 2:nRepeats
@@ -174,8 +183,8 @@ for NRP in 2:nRepeats
         MCMCChainsStorage.read(io, Chains)
     end    
     
-    myChains = sample(model, NUTS(10, 0.65, adtype=AutoZygote()), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
-    diagnostics_and_save(myChains, problem_jac)
+    myChains = @time sample(model, NUTS(1, 0.65, adtype=AutoZygote()), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
+    diagnostics_and_save(myChains, problem)
 
 end
 

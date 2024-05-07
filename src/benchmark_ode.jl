@@ -6,8 +6,7 @@ using SciMLSensitivity
 using Sundials
 using StatsPlots, Plots.Measures
 using LinearAlgebra
-using Symbolics
-using ModelingToolkit
+using ModelingToolkit, Symbolics, Catalyst
 using SparseArrays
 using Random
 using RCall
