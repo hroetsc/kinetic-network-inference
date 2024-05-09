@@ -29,7 +29,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "insilicoEX2"
-OUTNAME = "v13"
+OUTNAME = "v13_HMCDA"
 
 folderN = "results/inference/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -152,7 +152,8 @@ model_nuts = likelihood(vec(Xm), problem_0, x0)
 # benchmark = @benchmark sample(model, SMC(), MCMCThreads(), 10, 1; progress=true, save_state=true)
 # myChains = @time sample(model, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 
-myChains = @time sample(model_nuts, NUTS(10, 0.65, adtype = AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+# myChains = @time sample(model_nuts, NUTS(10, 0.65, adtype = AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+myChains = @time sample(model_nuts, HMCDA(10, 0.65, 0.3, adtype = AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 # myChains = @time sample(model_nuts, SMC(), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 diagnostics_and_save_sim(myChains, problem_0)
 
@@ -163,7 +164,7 @@ for NRP in 2:nRepeats
         MCMCChainsStorage.read(io, Chains)
     end
     
-    myChains = @time sample(model_nuts, NUTS(10, 0.65, adtype = AutoZygote()), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
+    myChains = @time sample(model_nuts, HMCDA(10, 0.65, 0.3, adtype = AutoZygote()), MCMCThreads(), Niter*NRP, nChains; progress=true, save_state=true, resume_from=chains_reloaded)
     diagnostics_and_save_sim(myChains, problem_0)
 
 end

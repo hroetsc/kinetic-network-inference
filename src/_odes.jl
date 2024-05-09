@@ -2,10 +2,6 @@
 # description:  functions for mass action ODE and Jacobian
 # author:       HPR
 
-# TODO: try using mul! instead of * for matrix multiplication
-# TODO: faster way of computing x^A
-# TODO: transpose x outside of ODE
-
 
 # ---- mass action ODE -----
 function massaction!(du, u, p, t)
