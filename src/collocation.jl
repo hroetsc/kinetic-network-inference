@@ -3,12 +3,14 @@
 # author:       HPR
 # based on: https://doi.org/10.1515/sagmb-2020-0025 and https://doi.org/10.1198/016214508000000797
 
+using Turing
 using DiffEqParamEstim
 using OrdinaryDiffEq
 using DiffEqFlux
 using Lux
 using Optimisers
 using Zygote
+using StatsPlots
 using Plots
 using Plots.Measures
 using LinearAlgebra
@@ -20,7 +22,11 @@ using DataFrames
 using StatsBase
 using Printf
 using Distributions
+using MCMCChainsStorage, HDF5, MCMCChains
+using PDFmerger: append_pdf!
+using StaticArrays, SparseArrays
 include("_odes.jl")
+include("_plot_utils.jl")
 
 Random.seed!(42)
 print(Threads.nthreads())
@@ -53,8 +59,12 @@ paramNames = ["σ"; info.rate_name]
 tspan = [minimum(tporig), maximum(tporig)]
 tp = tporig[tporig .> 0]
 Xm = Array{Float64}(X[2:size(X)[1],:])
-Xmt = Xm .+ 1
+# Xmt = Xm .+ 1
 
+
+# --------------------------------
+# ----- try data collocation -----
+# --------------------------------
 # ----- choose kernel -----
 # TODO: try different bandwidths
 
@@ -88,19 +98,16 @@ savefig(ppp, folderN*"estimated_abundance.pdf")
 # ----- collocation -----
 du, u = @time collocate_data(Xm', tp, EpanechnikovKernel(), h*1.1) # from DiffEqFlux, DiffEqParamEstim packages
 
-pl1 = plot(tporig, X, lc=:black, title="u", legend=false, xlabel = "digestion time [hrs]", ylabel = "log (signal+1) (u)", dpi=600, margin=5mm)
+pl1 = plot(tporig, X, lc=:black, title="u", legend=false, xlabel = "digestion time [hrs]", ylabel = "signal (u)", dpi=600, margin=5mm)
 plot!(tp, u', lc=:red)
 pl2 = plot(du', lc=:red, title = "du",legend=false, xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
 pl = plot(pl1,pl2, layout = (1,2))
 
-# ----- construct neural net -----
-# global m = zeros(r)
-# # global J = zeros(s,s)
-# # global Au = zeros(r,s)
-# # global Npm = zeros(s,r)
-# # global Np = zeros(s,r)
-# global du = zeros(s)
 
+# -----------------------
+# ----- NN solution -----
+# -----------------------
+# ----- construct neural net -----
 struct MALayer{F1} <: Lux.AbstractExplicitLayer
     dims::Int
     init_weight::F1
@@ -110,29 +117,29 @@ function MALayer(;dims::Int, init_weight=Lux.glorot_uniform)
     return MALayer{typeof(init_weight)}(dims, init_weight)
 end
 
-
 function Lux.initialparameters(rng::AbstractRNG, MALayer::MALayer)
     return (weight=MALayer.init_weight(rng, MALayer.dims))
 end
 Lux.initialstates(::AbstractRNG, ::MALayer) = NamedTuple()
 
 function (MALayer::MALayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
-    # mul!(m, A, log.(x))
-    # pm = ps.weight .* exp.(m)
-    # du = mul!(du, N, pm)
 
-    m = exp.(A*log.(x))
+    if all(x .> 0)
+        m = exp.(A*log.(x))
+    else
+        m = prod((x' .^ A), dims=2)
+    end
+    
     du = N*Diagonal(ps)*m
     return du, st
 end
 
 model = Chain(MALayer(;dims=r))
 
-
-
-# ----- set up training -----
+# ----- training functions -----
 rng = MersenneTwister(42)
-opt = Optimisers.Adam(0.01f0)
+# opt = Optimisers.Adam(0.01f0)
+opt = Optimisers.Adam()
 
 function loss_function(model, ps, st, data)
     y_pred, st = Lux.apply(model, data[1], ps, st)
@@ -158,24 +165,68 @@ function main(tstate::Lux.Experimental.TrainState, vjp, data, epochs)
     return tstate, losses
 end
 
+
+# ----- train and predict -----
 dev_cpu = cpu_device()
 dev_gpu = gpu_device()
 
+tstate, loss = @time main(tstate, vjp_rule, (Xm', du), 10000)
+y_pred = dev_cpu(Lux.apply(tstate.model, dev_gpu(Xm'), tstate.parameters, tstate.states)[1])
 
-# ----- train and predict -----
-tstate, loss = @time main(tstate, vjp_rule, (Xmt', du), 1000)
-y_pred = dev_cpu(Lux.apply(tstate.model, dev_gpu(Xmt'), tstate.parameters, tstate.states)[1])
+diagnostics_and_save_NN_sim(tstate, y_pred)
 
 
-# ----- evaluate -----
-plot(du', lc=:black, title = "du", legend=false, xlabel = "digestion time [hrs]", ylabel = "du", dpi=600)
-plot!(y_pred', lc=:red)
+# -----------------------------
+# ----- Bayesian solution -----
+# -----------------------------
+# ----- hyperparameters -----
+Niter = 1000
+nChains = 4
+numParam = length(paramNames)
 
-scatter(p0, tstate.parameters, legend=false,
-xlabel = "true parameter", ylabel = "predicted parameter",
-xlim = (0,maximum(p0)), ylim = (0,maximum(p0)))
+# ----- prior -----
+α_sigma = 1
+θ_sigma = 1
+α_k = 3
+θ_k = 1
 
-plot(loss, title = "training loss", ylim = (0,maximum(loss)*1.5),
-xlabel = "epoch", ylabel = "loss", legend=false, lc=:black)
+d1 = StatsPlots.plot(Gamma(α_sigma,θ_sigma), legend=false, lc=:black, title = "prior σ\nα="*string(α_sigma)*", θ="*string(θ_sigma), dpi = 600)
+d2 = StatsPlots.plot(Gamma(α_k,θ_k), legend=false, lc=:black, title = "prior k\nα="*string(α_k)*", θ="*string(θ_k), xlims = (0,25), dpi = 600)
+Plots.vline!(d2, [p0], line=:dash, lc=:red)
 
+d = StatsPlots.plot(d1,d2, layout = (1,2))
+savefig(d, folderN*"prior.png")
+
+# ----- MA and likelihood -----
+function MA(x, ps, A=A, N=N)
+    if all(x .> 0)
+        m = exp.(A*log.(x))
+    else
+        m = prod((x' .^ A), dims=2)
+    end
+    du = N*Diagonal(ps)*m
+    return du
+end
+
+
+@model function likelihood_du(du, α_sigma=α_sigma, θ_sigma=θ_sigma, α_k=α_k, θ_k=θ_k)
+    
+    # priors
+    Σ ~ Gamma(α_sigma, θ_sigma)
+    k ~ Product([Gamma(α_k, θ_k) for i in 1:r])
+
+    # simulate du
+    dup = MA(Xm', k)
+    
+    # calculate likelihood
+    # NOTE: length predicted equals iteration over time and not species!
+    du ~ MvNormal(vec(dup), Σ*I)
+    return nothing
+end
+
+modelb = likelihood_du(vec(du))
+myChains = @time sample(modelb, NUTS(10, 0.65, adtype = AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
+
+plot(myChains)
+diagnostics_and_save_sim(myChains, problem)
 
