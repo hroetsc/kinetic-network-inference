@@ -59,7 +59,6 @@ paramNames = ["σ"; info.rate_name]
 tspan = [minimum(tporig), maximum(tporig)]
 tp = tporig[tporig .> 0]
 Xm = Array{Float64}(X[2:size(X)[1],:])
-# Xmt = Xm .+ 1
 
 
 # --------------------------------
@@ -81,12 +80,16 @@ for kernel in kernels
     print(ks)
 
     # get estimates of du and u
-    du, u = @time collocate_data(Xm', tp, kernel, h*1.1) # from DiffEqFlux, DiffEqParamEstim packages
+    # du, u = @time collocate_data(Xm', tp, kernel, h+0.01) # from DiffEqFlux, DiffEqParamEstim packages
+    du, u = @time collocate_data(X', tporig, kernel, h+0.001) # from DiffEqFlux, DiffEqParamEstim packages
+
+    # calculate error
+    err = mean(abs2.(vec(X'.-u)))
 
     # plot
-    pl1 = plot(tporig, X, lc=:black, title="u, "*ks, legend=false, xlabel = "digestion time [hrs]", ylabel = "signal (u)", dpi=600, margin=5mm)
-    plot!(tp, u', lc=:red)
-    pl2 = plot(du', lc=:red, title = "du, "*ks,legend=false, xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
+    pl1 = plot(tporig, X, lc=:black, title="u, "*ks*", error="*string(round(err;digits=2)), legend=false, xlabel = "digestion time [hrs]", ylabel = "signal (u)", dpi=600, margin=5mm)
+    plot!(tporig, u', lc=:red)
+    pl2 = plot(tporig, du', lc=:red, title = "du, "*ks,legend=false, xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
     pl = plot(pl1,pl2, layout = (1,2))
 
     push!(pp, pl)
@@ -94,15 +97,16 @@ end
 ppp = plot(pp...; size = default(:size) .* (1,11), layout=(11,1), dpi = 600, margin=10mm)
 savefig(ppp, folderN*"estimated_abundance.pdf")
 
+# TriweightKernel
 
 # ----- collocation -----
-du, u = @time collocate_data(Xm', tp, EpanechnikovKernel(), h*1.1) # from DiffEqFlux, DiffEqParamEstim packages
+du, u = @time collocate_data(X', tporig, TriweightKernel(), h+0.001) # from DiffEqFlux, DiffEqParamEstim packages
 
 pl1 = plot(tporig, X, lc=:black, title="u", legend=false, xlabel = "digestion time [hrs]", ylabel = "signal (u)", dpi=600, margin=5mm)
-plot!(tp, u', lc=:red)
-pl2 = plot(du', lc=:red, title = "du",legend=false, xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
+plot!(tporig, u', lc=:red)
+pl2 = plot(tporig, du', lc=:red, title = "du",legend=false, xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
 pl = plot(pl1,pl2, layout = (1,2))
-
+savefig(pl, folderN*"estimated_abundance_chosen.png")
 
 # -----------------------
 # ----- NN solution -----
@@ -124,11 +128,8 @@ Lux.initialstates(::AbstractRNG, ::MALayer) = NamedTuple()
 
 function (MALayer::MALayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
 
-    if all(x .> 0)
-        m = exp.(A*log.(x))
-    else
-        m = prod((x' .^ A), dims=2)
-    end
+    m = exp.(A*log.(x.+0.001))
+    # m[:,1] = prod((x[:,1]' .^ A), dims=2) 
     
     du = N*Diagonal(ps)*m
     return du, st
@@ -170,9 +171,8 @@ end
 dev_cpu = cpu_device()
 dev_gpu = gpu_device()
 
-tstate, loss = @time main(tstate, vjp_rule, (Xm', du), 10000)
-y_pred = dev_cpu(Lux.apply(tstate.model, dev_gpu(Xm'), tstate.parameters, tstate.states)[1])
-
+tstate, loss = @time main(tstate, vjp_rule, (X', du), 10000)
+y_pred = dev_cpu(Lux.apply(tstate.model, dev_gpu(X'), tstate.parameters, tstate.states)[1])
 diagnostics_and_save_NN_sim(tstate, y_pred)
 
 

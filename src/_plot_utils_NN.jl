@@ -1,7 +1,7 @@
 include("_odes.jl")
 
 # simulated data
-function diagnostics_and_save_NN_sim(tstate, y_pred)
+function diagnostics_and_save_NN_sim(tstate, y_pred, steps=50)
 
     pinf = tstate.parameters
 
@@ -18,8 +18,10 @@ function diagnostics_and_save_NN_sim(tstate, y_pred)
     savefig(pl1, folderN*"training_metrics.png")
 
     # ---- simulate ODE with parameters -----
+    # more fine-grained time steps
+    tps = collect(range(0.0,tspan[2],steps))
     problem = ODEProblem(massaction_stable, x0, tspan, pinf)
-    integ = solve(problem, TRBDF2(), saveat=tporig)
+    integ = solve(problem, TRBDF2(), saveat=tps)
     integu = mapreduce(permutedims, vcat, integ.u)
 
     # ----- plot -----
@@ -27,8 +29,8 @@ function diagnostics_and_save_NN_sim(tstate, y_pred)
     for i in 1:s
         
         # plot u
-        plu = plot(tp, u[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
-        plot!(tporig, integu[:,i], lc=:red, label="predicted")
+        plu = plot(tporig, u[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
+        plot!(tps, integu[:,i], lc=:red, label="predicted")
         plot!(tporig, X[:,i], lc=:green, label="ground truth")
 
         # plot du
