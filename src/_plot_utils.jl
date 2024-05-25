@@ -199,7 +199,7 @@ function plot_kinetics(myChains, problem, burnin=0.7, steps=10)
         print(en)
 
         for t in counter:en
-            ribbon = (q25[t,:], q75[t,:])
+            ribbon = (q75[i,:] - q25[i,:]) ./ 2
         
             pl = plot(tps, μ[t,:], ribbon=ribbon, fillalpha=0.3, lc=:purple, fc=:purple,
             title = species[t]*"\niterations="*string(NI), xlab = "", ylab = "", dpi = 600, legend=false)
@@ -260,7 +260,7 @@ function plot_kinetics_sim(myChains, problem, burnin=0.7, steps=50)
     # plot
     rm(folderN*"residuals.pdf", force=true, recursive=true)
     for t in 1:s
-        ribbon = (q25[t,:], q75[t,:])
+        ribbon = (q75[i,:] - q25[i,:]) ./ 2
         
         pl = plot(tps, μ[t,:], ribbon=ribbon, fillalpha=0.3, lc=:purple, fc=:purple,
         title = species[t]*"\niterations="*string(NI), xlab = "time (hrs)", ylab = "concentration", label = "predicted", dpi = 600)
