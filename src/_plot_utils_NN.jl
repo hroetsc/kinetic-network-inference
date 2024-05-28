@@ -59,7 +59,7 @@ end
 
 
 # ----- real data -----
-function diagnostics_and_save_NN(tstates, ypreds, losses, loss_only=false, steps=10)
+function diagnostics_and_save_NN(tstates, ypreds, losses, loss_only=false, blackbox=false, steps=10)
 
     pal = palette(:bamako, nr+1)
 
@@ -74,29 +74,34 @@ function diagnostics_and_save_NN(tstates, ypreds, losses, loss_only=false, steps
     savefig(ls, folderN*"loss.png")
 
     # ----- parameters
-    print("parameters....\n")
-    pinfs = []
-    for ii in 1:nr
-        push!(pinfs, tstates[ii].parameters)
+    if !blackbox
+        print("parameters....\n")
+        pinfs = []
+        for ii in 1:nr
+            push!(pinfs, tstates[ii].parameters)
+        end
+        pinf = mapreduce(permutedims, vcat, pinfs)
+        pdist = boxplot(pinf, palette = :bamako, legend=false,
+        title="parameters", xlabel="parameter #", ylabel="parameter value", size = default(:size) .* (10,10))
+        savefig(pdist, folderN*"parameters.pdf")
     end
-    pinf = mapreduce(permutedims, vcat, pinfs)
-    pdist = boxplot(pinf, palette = :bamako, legend=false,
-    title="parameters", xlabel="parameter #", ylabel="parameter value", size = default(:size) .* (10,10))
-    savefig(pdist, folderN*"parameters.pdf")
 
     if !loss_only
-        # ---- simulate ODE with parameters -----
-        # more fine-grained time steps
-        tps = collect(range(0.0,tspan[2],steps))
-        problem = ODEProblem(massaction_stable, x0, tspan, pinfs[1])
-        
-        # FIXME: too slow
-        # integu = []
-        # for ii in 1:nr
-        #     integ = @time solve(problem, TRBDF2(), saveat=tps; p=pinfs[ii])
-        #     push!(integu, mapreduce(permutedims, vcat, integ.u))
-        # end
 
+        # FIXME: too slow
+        # if !blackbox
+            # # ---- simulate ODE with parameters -----
+            # # more fine-grained time steps
+            # tps = collect(range(0.0,tspan[2],steps))
+            # problem = ODEProblem(massaction_stable, x0, tspan, pinfs[1])
+            # 
+            # integu = []
+            # for ii in 1:nr
+            #     integ = @time solve(problem, TRBDF2(), saveat=tps; p=pinfs[ii])
+            #     push!(integu, mapreduce(permutedims, vcat, integ.u))
+            # end
+        # end
+        
 
         # ----- plot u and du -----
         print("kinetics....\n")
@@ -135,9 +140,9 @@ function diagnostics_and_save_NN(tstates, ypreds, losses, loss_only=false, steps
                 plot!(tporig, X_μ[i,:], ribbon=ribbon_x, fillalpha=0.3, lc=:green, fc=:green, label="ground truth")
 
                 # plot du
-                pldu = plot(DUU_μ[i,:], ribbon=ribbon_duu, fillalpha=0.3, lc=:black, fc=:black,
+                pldu = plot(tporig, DUU_μ[i,:], ribbon=ribbon_duu, fillalpha=0.3, lc=:black, fc=:black,
                 title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
-                plot!(YPREDU_μ[i,:], ribbon=ribbon_ypredu, fillalpha=0.3, lc=:red, fc=:red, label="predicted")
+                plot!(tporig, YPREDU_μ[i,:], ribbon=ribbon_ypredu, fillalpha=0.3, lc=:red, fc=:red, label="predicted")
 
                 # combine
                 push!(pp, plot(plu,pldu, layout = (1,2)))

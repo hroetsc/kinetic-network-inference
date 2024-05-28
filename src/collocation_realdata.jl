@@ -3,7 +3,8 @@
 # author:       HPR
 # based on: https://doi.org/10.1515/sagmb-2020-0025 and https://doi.org/10.1198/016214508000000797
 
-using Turing, ApproxBayes
+# using Turing
+# using ApproxBayes
 using DiffEqParamEstim
 using OrdinaryDiffEq
 using DiffEqFlux
@@ -21,7 +22,7 @@ using BenchmarkTools
 using DataFrames
 using StatsBase
 using Printf
-# using Distributions
+using Distributions
 using MCMCChainsStorage, HDF5, MCMCChains, JLD2
 using PDFmerger: append_pdf!
 using StaticArrays, SparseArrays
@@ -33,14 +34,14 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "IDH1_WT"
-OUTNAME = "abc_v1"
+OUTNAME = "nn_v7_noblackbox+offrates+bias"
 folderN = "results/collocation/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
 
-eps = 0.001
+eps = 1e-06
 
 # ----- INPUT -----
-R"load(paste0('results/graphs/IDH1_WT_v3.RData'))" # TODO: make protein_name variable
+R"load(paste0('results/graphs/IDH1_WT_v4-offrates.RData'))" # TODO: make protein_name variable
 @rget DATA;
 
 X = Array{Union{Missing,Float64}}(DATA[:S])
@@ -89,104 +90,130 @@ for ii in 1:nr
 end
 
 
-# # -----------------------
-# # ----- NN solution -----
-# # -----------------------
-# # ----- construct neural net -----
-# struct MALayer{F1} <: Lux.AbstractExplicitLayer
-#     dims::Int
-#     init_weight::F1
+# -----------------------
+# ----- NN solution -----
+# -----------------------
+# ----- construct neural net -----
+struct MALayer{F1} <: Lux.AbstractExplicitLayer
+    dims::Int
+    init_weight::F1
+end
+
+function MALayer(;dims::Int, init_weight=Lux.glorot_uniform)
+    return MALayer{typeof(init_weight)}(dims, init_weight)
+end
+
+function Lux.initialparameters(rng::AbstractRNG, MALayer::MALayer)
+    return (weight=MALayer.init_weight(rng, MALayer.dims))
+end
+Lux.initialstates(::AbstractRNG, ::MALayer) = NamedTuple()
+
+function (MALayer::MALayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
+
+    p = ps[1:r]
+    b = ps[r+1:r+s]
+    m = exp.(A*log.(x .+ eps))
+    du = N*Diagonal(p)*m .+ b
+    return du, st
+end
+
+model = Chain(MALayer(;dims=r+s))
+# model = Lux.Chain(Lux.Dense(s => 1), Lux.Dense(1 => s))
+
+# ----- training functions -----
+# rng, optimiser, etc
+rng = MersenneTwister(42)
+opt = Optimisers.Adam(0.05)
+# Σ = 2
+# opt = Optimisers.AdamW()
+# opt = Optimisers.RMSProp(0.05)
+
+# function ksdist(x::AbstractVector{T}, y::AbstractVector{S}) where {T <: Real, S <: Real}
+#   #adapted from HypothesisTest.jl
+#   n_x, n_y = length(x), length(y)
+#   sort_idx = sortperm([x; y])
+#   pdf_diffs = [ones(n_x)/n_x; -ones(n_y)/n_y][sort_idx]
+#   cdf_diffs = cumsum(pdf_diffs)
+#   δp = maximum(cdf_diffs)
+#   δn = -minimum(cdf_diffs)
+#   δ = max(δp, δn)
+#   return δ
 # end
 
-# function MALayer(;dims::Int, init_weight=Lux.glorot_uniform)
-#     return MALayer{typeof(init_weight)}(dims, init_weight)
-# end
+function loss_function(model, ps, st, data)
+    ki = data[3] # index with no missing values
+    ypred, st = Lux.apply(model, data[1], ps, st)
+    dist = sqrt(mean(abs2, vec(ypred)[ki] .- vec(data[2])[ki]))
+    # dist = ksdist(vec(ypred)[ki], vec(data[2])[ki])
+    # d = MvNormal(vec(data[2])[ki], Σ*I)
+    # dist = pdf(d, vec(ypred)[ki])
+    return dist, st, ()
+end
 
-# function Lux.initialparameters(rng::AbstractRNG, MALayer::MALayer)
-#     return (weight=MALayer.init_weight(rng, MALayer.dims))
-# end
-# Lux.initialstates(::AbstractRNG, ::MALayer) = NamedTuple()
-
-# function (MALayer::MALayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
-
-#     m = exp.(A*log.(x .+ eps))
-#     du = N*Diagonal(ps)*m
-#     return du, st
-# end
-
-# model = Chain(MALayer(;dims=r))
-
-
-# # ----- training functions -----
-# # rng, optimiser, etc
-# rng = MersenneTwister(42)
-# opt = Optimisers.Adam(0.5)
-# # opt = Optimisers.AdamW()
-# # opt = Optimisers.RMSProp(0.05)
-
-# function loss_function(model, ps, st, data)
-#     ki = data[3] # index with no missing values
-#     y_pred, st = Lux.apply(model, data[1], ps, st)
-#     mse_loss = sqrt(mean(abs2, vec(y_pred)[ki] .- vec(data[2])[ki]))
-#     # mse_loss = mean(abs2, vec(y_pred) .- vec(data[2]))
-#     return mse_loss, st, ()
-# end
-
-# function main(tstate::Lux.Experimental.TrainState, vjp, data, epochs)
-#     data = data .|> gpu_device()
-#     losses = []
-#     for epoch in 1:epochs
-#         grads, loss, stats, tstate = Lux.Training.compute_gradients(
-#             vjp, loss_function, data, tstate)
-#         if epoch % 100 == 1 || epoch == epochs
-#             @printf "Epoch: %3d \t Loss: %.5g\n" epoch loss
-#         end
-#         tstate = Lux.Training.apply_gradients(tstate, grads)
-#         push!(losses,loss)
-#     end
-#     return tstate, losses
-# end
+function main(tstate::Lux.Experimental.TrainState, vjp, data, epochs)
+    data = data .|> gpu_device()
+    losses = []
+    for epoch in 1:epochs
+        grads, loss, stats, tstate = Lux.Training.compute_gradients(
+            vjp, loss_function, data, tstate)
+        if epoch % 100 == 1 || epoch == epochs
+            @printf "Epoch: %3d \t Loss: %.5g\n" epoch loss
+        end
+        tstate = Lux.Training.apply_gradients(tstate, grads)
+        push!(losses,loss)
+    end
+    return tstate, losses
+end
 
 
-# # ----- train and predict -----
-# # epochs = 100000
-# epochs = 10000
-# dev_cpu = cpu_device()
-# dev_gpu = gpu_device()
+# ----- train and predict -----
+# epochs = 100000
+epochs = 1000
+dev_cpu = cpu_device()
+dev_gpu = gpu_device()
 
-# tstates = []
-# losses = []
-# ypreds = []
+tstates = []
+losses = []
+ypreds = []
 
-# for ii in 1:nr
-#     # initialise and train
-#     tstate = Lux.Experimental.TrainState(rng, model, opt)
-#     vjp_rule = AutoZygote()
-    
-#     tstate, loss = @time main(tstate, vjp_rule, (Xn0[:,:,ii]', dus[ii], kis[ii]), epochs)
-#     ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(Xn0[:,:,ii]'), tstate.parameters, tstate.states)[1])
+for ii in 1:nr
+    # initialise and train
+    tstate = Lux.Experimental.TrainState(rng, model, opt)
+    vjp_rule = AutoZygote()
 
-#     # save train stae and predictions
-#     save_object(folderN*"tstate_rep"*string(ii)*".jld2", tstate)
-#     ypreddf = DataFrame(ypred, [:ypred0, :ypred1, :ypred2, :ypred3, :ypred4])
-#     ypreddf[!,:species] = species
-#     dudf = DataFrame(dus[ii], [:du0, :du1, :du2, :du3, :du4])
-#     CSV.write(folderN*"pred_rep"*string(ii)*".csv", hcat(ypreddf,dudf))
+    tstate, loss = @time main(tstate, vjp_rule, (Xn0[:,:,ii]', dus[ii], kis[ii]), epochs)
+    ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(Xn0[:,:,ii]'), tstate.parameters, tstate.states)[1])
+    # XX = us[ii]
+    # XX[XX .< 0] .= 0.0
+    # tstate, loss = @time main(tstate, vjp_rule, (XX, dus[ii], kis[ii]), epochs)
+    # ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(XX), tstate.parameters, tstate.states)[1])
 
-#     # append to list
-#     push!(tstates,tstate)
-#     push!(losses,loss)
-#     push!(ypreds, ypred)
-# end
+    # save train state and predictions
+    save_object(folderN*"tstate_rep"*string(ii)*".jld2", tstate)
+    ypreddf = DataFrame(ypred, [:ypred0, :ypred1, :ypred2, :ypred3, :ypred4])
+    ypreddf[!,:species] = species
+    dudf = DataFrame(dus[ii], [:du0, :du1, :du2, :du3, :du4])
+    CSV.write(folderN*"pred_rep"*string(ii)*".csv", hcat(ypreddf,dudf))
 
-# diagnostics_and_save_NN(tstates, ypreds, losses, false)
+    # append to list
+    push!(tstates,tstate)
+    push!(losses,loss)
+    push!(ypreds, ypred)
+end
 
+# -- no blackbox
+diagnostics_and_save_NN(tstates, ypreds, losses, false)
 
-# # ----- get output and save -----
-# info[!, :param_1] = tstates[1].parameters
-# info[!, :param_2] = tstates[2].parameters
-# info[!, :param_3] = tstates[3].parameters
-# CSV.write(folderN*"parameters.csv", info)
+# -- blackbox
+# diagnostics_and_save_NN(tstates, ypreds, losses, false, true)
+# heatmap(tstates[1].parameters[1][1])
+# heatmap(tstates[1].parameters[2][1])
+
+# ----- get output and save -----
+info[!, :param_1] = tstates[1].parameters[1:r]
+info[!, :param_2] = tstates[2].parameters[1:r]
+info[!, :param_3] = tstates[3].parameters[1:r]
+CSV.write(folderN*"parameters.csv", info)
 
 
 
@@ -225,9 +252,9 @@ setup = ABCSMC(simulation, #simulation function
   r, # number of parameters
   2.0, # target ϵ - 0.1
   ApproxBayes.Prior(prior), #Prior for each of the parameters
-  maxiterations=10000, # maxiterations
+  maxiterations=10000000, # maxiterations
 #   X1, # constants
-  nparticles=10, # nparticles
+  nparticles=1000, # nparticles
   α=0.3, # The αth quantile of population i is chosen as the ϵ for population i + 1
   ϵ1=10^5, # Starting ϵ for first ABC SMC populations
   convergence=0.05, # ABC SMC stops when ϵ in population i + 1 is within 0.05 of populations i

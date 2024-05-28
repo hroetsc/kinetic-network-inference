@@ -14,7 +14,7 @@ Nmax = 40
 protein_name = "IDH1_WT"
 
 # ----- INPUT -----
-load(paste0("results/graphs/",protein_name,"_v3.RData"))
+load(paste0("results/graphs/",protein_name,"_v4-offrates.RData"))
 finalK = DATA$finalK
 substrateSeq = finalK$substrateSeq[1]
 L = nchar(substrateSeq)
@@ -120,4 +120,4 @@ DATA$reactions = rownames(A)
 DATA$A = A
 DATA$B = B
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v3.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v4-offrates.RData"))
