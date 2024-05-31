@@ -42,28 +42,29 @@ pepTbl$pepSeq %>% unique() %>% length()
 # ----- graph and corresponding rates -----
 GRAPH = constructGraphNetwork(pepTbl, numCPU, Nmin, Nmax) %>%
   dplyr::mutate(reaction_ID = 1:n(),
-                rate_name = paste0("on_",reaction_ID))
+                rate_1_name = paste0("Vmax_",reaction_ID),
+                rate_2_name = paste0("Km_",reaction_ID))
 
-# --- with off rates
-# get off rates
-OFF = GRAPH
-nm = str_replace_all(names(GRAPH),"reactant_","x_")
-nm = str_replace_all(nm ,"product_","reactant_")
-nm = str_replace_all(nm ,"x_","product_")
-names(OFF) = nm
+# # --- with off rates
+# # get off rates
+# OFF = GRAPH
+# nm = str_replace_all(names(GRAPH),"reactant_","x_")
+# nm = str_replace_all(nm ,"product_","reactant_")
+# nm = str_replace_all(nm ,"x_","product_")
+# names(OFF) = nm
 
-OFF = OFF %>%
-  dplyr::mutate(rate_name = paste0("off_",reaction_ID))
+# OFF = OFF %>%
+#   dplyr::mutate(rate_name = paste0("off_",reaction_ID))
 
-# combine
-REACTIONS = list(GRAPH, OFF) %>%
-  rbindlist(use.names = T, fill = T) %>%
-  dplyr::arrange(reaction_ID)
+# # combine
+# REACTIONS = list(GRAPH, OFF) %>%
+#   rbindlist(use.names = T, fill = T) %>%
+#   dplyr::arrange(reaction_ID)
 
 # --- without off rates
-# # NOTE: no off rates
-# REACTIONS = GRAPH %>%
-#   dplyr::arrange(reaction_ID)
+# NOTE: no off rates
+REACTIONS = GRAPH %>%
+  dplyr::arrange(reaction_ID)
 
 # plot
 coord_graph = REACTIONS %>%
@@ -93,7 +94,7 @@ ggsave(paste0("results/graphs/",protein_name,"_graph.pdf"), plot = grph,
 # ----- matrices -----
 species = c(REACTIONS$reactant_1, REACTIONS$reactant_2,
             REACTIONS$product_1, REACTIONS$product_2) %>% na.omit() %>% unique()
-reactions = REACTIONS$rate_name
+reactions = paste0("rct_",REACTIONS$reaction_ID)
 s = length(species)
 r = length(reactions)
 
@@ -126,5 +127,5 @@ DATA = list(A = A,
             finalK = finalK,
             pepTbl = pepTbl)
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v4-offrates.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v5-MM.RData"))
 

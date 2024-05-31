@@ -14,7 +14,7 @@ Nmax = 40
 protein_name = "IDH1_WT"
 
 # ----- INPUT -----
-load(paste0("results/graphs/",protein_name,"_v4-offrates.RData"))
+load(paste0("results/graphs/",protein_name,"_v5-MM.RData"))
 finalK = DATA$finalK
 substrateSeq = finalK$substrateSeq[1]
 L = nchar(substrateSeq)
@@ -117,7 +117,8 @@ DATA$timepoints = dimnames(S)[[1]] %>% as.numeric()
 DATA$replicates = dimnames(S)[[3]]
 DATA$species = species
 DATA$reactions = rownames(A)
+DATA$rates = c(DATA$REACTIONS$rate_1_name, DATA$REACTIONS$rate_2_name)
 DATA$A = A
 DATA$B = B
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v4-offrates.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v5-MM.RData"))
