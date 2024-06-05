@@ -215,7 +215,12 @@ info[!, :param_2] = tstates[2].parameters[1:r]
 info[!, :param_3] = tstates[3].parameters[1:r]
 CSV.write(folderN*"parameters.csv", info)
 
-
+bias = DataFrame([tstates[1].parameters[r+1:r+s],
+            tstates[2].parameters[r+1:r+s],
+            tstates[3].parameters[r+1:r+s],
+            species],
+        [:b_1, :b_2, :b_3, :species])
+CSV.write(folderN*"bias.csv", bias)
 
 
 # # -----------------------------

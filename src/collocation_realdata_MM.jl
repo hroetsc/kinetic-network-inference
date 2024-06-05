@@ -34,7 +34,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "IDH1_WT"
-OUTNAME = "nn_v2"
+OUTNAME = "nn_v2+bias"
 folderN = "results/collocation_MM/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
 
@@ -82,6 +82,8 @@ end
 mt = length(tporig) # number of time points
 h = mt^(-1/5)*mt^(-3/35)*log(mt)^(-1/16)
 
+# TODO: try different kernels
+
 # ----- collocation -----
 dus = []
 us = []
@@ -114,15 +116,16 @@ function (MMLayer::MMLayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
 
     vmax = ps[1:r]
     Km = ps[r+1:nP]
+    b = ps[nP+1:nP+s]
     # b = abs.(ps[nP+1:nP+s])
 
     m = exp.(A*log.(x .+ eps))
     
-    du = N*((Diagonal(vmax)*m) ./ (Km .+ m))
+    du = N*((Diagonal(vmax)*m) ./ (Km .+ m)) .+ b
     return du, st
 end
 
-model = Chain(MMLayer(;dims=nP))
+model = Chain(MMLayer(;dims=nP+s))
 
 # ----- training functions -----
 # rng, optimiser, etc
@@ -214,10 +217,19 @@ diagnostics_and_save_NN(tstates, ypreds, losses, false)
 # heatmap(tstates[1].parameters[2][1])
 
 # ----- get output and save -----
-info[!, :param_1] = tstates[1].parameters[1:r]
-info[!, :param_2] = tstates[2].parameters[1:r]
-info[!, :param_3] = tstates[3].parameters[1:r]
+info[!, :Vmax_1] = tstates[1].parameters[1:r]
+info[!, :Vmax_2] = tstates[2].parameters[1:r]
+info[!, :Vmax_3] = tstates[3].parameters[1:r]
+info[!, :Km_1] = tstates[1].parameters[r+1:2*r]
+info[!, :Km_2] = tstates[2].parameters[r+1:2*r]
+info[!, :Km_3] = tstates[3].parameters[r+1:2*r]
 CSV.write(folderN*"parameters.csv", info)
 
 
+bias = DataFrame([tstates[1].parameters[r+1:r+s],
+            tstates[2].parameters[r+1:r+s],
+            tstates[3].parameters[r+1:r+s],
+            species],
+        [:b_1, :b_2, :b_3, :species])
+CSV.write(folderN*"bias.csv", bias)
 

@@ -169,32 +169,34 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
                   detected = P1.P1_ %in% pos$pcp$P1.P1_)
   cleavage_template = cleavageTemplate(Nmin,Nmax,L)
   
+  table(pcp$validLength, pcp$detected)
+
   # ----- cleave the substrate
-  st = 1
-  en = L
-  reactant = subnode
-  reactant_detected = TRUE
-  HOP1 = lapply(cleavage_template[[as.character(L)]], function(c) {
+  # st = 1
+  # en = L
+  # reactant = subnode
+  # reactant_detected = TRUE
+  # HOP1 = lapply(cleavage_template[[as.character(L)]], function(c) {
       
-      abs_site = st+c-1
-      k1 = which(pcp$P1_ == st & pcp$P1 == abs_site)
-      k2 = which(pcp$P1_ == abs_site+1 & pcp$P1 == en)
+  #     abs_site = st+c-1
+  #     k1 = which(pcp$P1_ == st & pcp$P1 == abs_site)
+  #     k2 = which(pcp$P1_ == abs_site+1 & pcp$P1 == en)
       
-      product_detected = sapply(c(k1,k2), function(j) {
-        pcp$detected[j]
-      }) %>% as.vector()
+  #     product_detected = sapply(c(k1,k2), function(j) {
+  #       pcp$detected[j]
+  #     }) %>% as.vector()
       
-      # reactant --> product
-      PCP = data.table(cleavage_site_abs = abs_site, cleavage_site = c,
-                       reactant_1 = reactant, reactant_2 = NA,
-                       reactant_1_valid = TRUE, reactant_2_valid = NA,
-                       product_1_valid = pcp$validLength[k1], product_2_valid = pcp$validLength[k2],
-                       reactant_1_detected = reactant_detected, reactant_2_detected = NA,
-                       product_1 = pcp$P1.P1_[k1], product_2 = pcp$P1.P1_[k2],
-                       product_1_detected = product_detected[1], product_2_detected = product_detected[2])
-      return(PCP)
-    }) %>%
-      rbindlist()
+  #     # reactant --> product
+  #     PCP = data.table(cleavage_site_abs = abs_site, cleavage_site = c,
+  #                      reactant_1 = reactant, reactant_2 = NA,
+  #                      reactant_1_valid = TRUE, reactant_2_valid = NA,
+  #                      product_1_valid = pcp$validLength[k1], product_2_valid = pcp$validLength[k2],
+  #                      reactant_1_detected = reactant_detected, reactant_2_detected = NA,
+  #                      product_1 = pcp$P1.P1_[k1], product_2 = pcp$P1.P1_[k2],
+  #                      product_1_detected = product_detected[1], product_2_detected = product_detected[2])
+  #     return(PCP)
+  #   }) %>%
+  #     rbindlist()
 
   # # ----- only direkt cleavage products of the substrate are allowed as precursors
   # longpcp = pcp %>%
@@ -203,7 +205,7 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
   #   dplyr::arrange(N)  # important!!!
 
   longpcp = pcp %>%
-    dplyr::filter(detected | P1.P1_ %in% c(subnode, HOP1$product_1, HOP1$product_2)) %>%
+    # dplyr::filter(detected | P1.P1_ %in% c(subnode, HOP1$product_1, HOP1$product_2)) %>%
     dplyr::filter(N >= (Nmin+1) & (N <= (2*Nmax) | N == L)) %>%
     dplyr::arrange(N)  # important!!!
   
@@ -310,7 +312,7 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
     as.data.table()
 
   print(paste0("number of reactions: ",nrow(ALL)))
-
+  
   # ensure that all products are connected to substrate node
   # adjacency list
   adjList = adjacency_check(ALL, subnode)
