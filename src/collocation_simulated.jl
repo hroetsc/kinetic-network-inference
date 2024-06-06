@@ -32,7 +32,7 @@ include("_plot_utils_NN.jl")
 Random.seed!(42)
 print(Threads.nthreads())
 
-protein_name = "simulated"
+protein_name = "Ex4_15s"
 OUTNAME = "fit_MA_with_MA"
 folderN = "results/collocation/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -40,7 +40,7 @@ mkpath(folderN)
 eps = 1e-06
 
 # ----- INPUT -----
-R"load(paste0('data/simulation/Ex3_MA_DATA.RData'))"
+R"load(paste0('data/simulation/Ex4_15s_MA_DATA.RData'))"
 @rget DATA_MA;
 DATA = DATA_MA
 
@@ -74,7 +74,7 @@ Xm = Array{Float64}(X[2:size(X)[1],:])
 # ----- choose kernel -----
 # TODO: try different bandwidths
 
-mt = length(tp) # number of time points
+mt = length(tporig) # number of time points
 h = mt^(-1/5)*mt^(-3/35)*log(mt)^(-1/16)
 
 kernels = [EpanechnikovKernel(), UniformKernel(), TriangularKernel(), QuarticKernel(), TriweightKernel(), 
@@ -135,8 +135,10 @@ Lux.initialstates(::AbstractRNG, ::MALayer) = NamedTuple()
 
 function (MALayer::MALayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
 
+    p = ps .+ rand(Uniform(-1e-02, 1e-02), nP)
+
     m = exp.(A*log.(x.+eps))
-    du = N*Diagonal(ps)*m
+    du = N*Diagonal(p)*m
     return du, st
 end
 
@@ -167,22 +169,12 @@ function (MMLayer::MMLayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
 end
 
 # ----- training functions -----
-# model = Chain(MMLayer(;dims=nP))
-model = Chain(MALayer(;dims=nP))
-
-
-rng = MersenneTwister(42)
-# opt = Optimisers.Adam(0.01f0)
-opt = Optimisers.Adam()
-
 function loss_function(model, ps, st, data)
     y_pred, st = Lux.apply(model, data[1], ps, st)
     mse_loss = sqrt(mean(abs2, y_pred .- data[2]))
     return mse_loss, st, ()
 end
 
-tstate = Lux.Experimental.TrainState(rng, model, opt)
-vjp_rule = AutoZygote()
 
 function main(tstate::Lux.Experimental.TrainState, vjp, data, epochs)
     data = data .|> gpu_device()
@@ -201,14 +193,32 @@ end
 
 
 # ----- train and predict -----
+model = Chain(MALayer(;dims=nP))
+rng = MersenneTwister(42)
+opt = Optimisers.Adam(0.00001)
+
 dev_cpu = cpu_device()
 dev_gpu = gpu_device()
 
-tstate, loss = @time main(tstate, vjp_rule, (X', du), 10000)
-y_pred = dev_cpu(Lux.apply(tstate.model, dev_gpu(X'), tstate.parameters, tstate.states)[1])
-diagnostics_and_save_NN_sim(tstate, y_pred, true)
+tstates = []
+losses = []
+ypreds = []
+for i in 1:10
+    tstate = Lux.Experimental.TrainState(rng, model, opt)
+    vjp_rule = AutoZygote()
 
+    tstate, loss = @time main(tstate, vjp_rule, (X', du), 100000)
+    ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(X'), tstate.parameters, tstate.states)[1])
 
+    # append to list
+    push!(tstates,tstate)
+    push!(losses,loss)
+    push!(ypreds, ypred)
+end
+
+diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, true)
+
+print("done")
 
 # # -----------------------------
 # # ----- Bayesian solution -----
@@ -239,24 +249,24 @@ diagnostics_and_save_NN_sim(tstate, y_pred, true)
 # end
 
 
-# @model function likelihood_du(du, α_sigma=α_sigma, θ_sigma=θ_sigma, α_k=α_k, θ_k=θ_k)
+# @model function likelihood_du(X, duflat, α_sigma=α_sigma, θ_sigma=θ_sigma, α_k=α_k, θ_k=θ_k)
     
 #     # priors
 #     Σ ~ Gamma(α_sigma, θ_sigma)
 #     k ~ Product([Gamma(α_k, θ_k) for i in 1:r])
 
 #     # simulate du
-#     dup = MA(Xm', k)
-    
+#     dup = MA(X', k)
+#     dup = Array{Float64}(vec(dup))
 #     # calculate likelihood
 #     # NOTE: length predicted equals iteration over time and not species!
-#     du ~ MvNormal(vec(dup), Σ*I)
+#     duflat ~ MvNormal(dup, Σ*I)
 #     return nothing
 # end
 
-# modelb = likelihood_du(vec(du))
+# modelb = likelihood_du(Array{Float64}(X), Array{Float64}(vec(du)))
 # myChains = @time sample(modelb, NUTS(10, 0.65, adtype = AutoZygote()), MCMCThreads(), Niter, nChains; progress=true, save_state=true)
 
-# plot(myChains)
+# # plot(myChains)
 # diagnostics_and_save_sim(myChains, problem)
 

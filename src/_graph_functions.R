@@ -290,6 +290,7 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
     data.table::rbindlist() %>%
     as_tibble()
 
+  # FIXME!
   allPCP = allPCP %>%
     dplyr::mutate(product_1_sr = product_1 %in% allPSP$reactant_1,
                   product_2_sr = product_2 %in% allPSP$reactant_2) %>%
