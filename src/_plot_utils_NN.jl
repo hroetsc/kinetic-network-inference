@@ -95,6 +95,7 @@ end
 function diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, ma=false, steps=50)
 
     nr = length(tstates)
+    mt = length(tporig)
     pal = palette(:bamako, nr+1)
 
     # ----- loss

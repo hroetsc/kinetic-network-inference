@@ -12,7 +12,7 @@ theme_set(theme_classic())
 numCPU = 4
 
 n = 20
-OUTNAME = "Ex4_15s"
+OUTNAME = "Ex4_20s"
 tpoints = seq(0,4,0.05)
 tpoints_coarse = seq(0,4,1)
 
@@ -57,14 +57,14 @@ mc.cores = numCPU)
 allPCP <- data.table::rbindlist(allPCP) %>%
     dplyr::mutate(N = nchar(pepSeq))
 
-# set.seed(893)
-# uniquePeps = allPCP$pepSeq %>% unique()
-# paste0("number of unique peptides: ", length(uniquePeps)) %>% print()
-# k = sample(1:length(uniquePeps), n)
-# chosenPCP = allPCP %>%
-#     dplyr::filter(pepSeq %in% c(uniquePeps[k], substrateSeq)) # add the substrate
+set.seed(893)
+uniquePeps = allPCP$pepSeq %>% unique()
+paste0("number of unique peptides: ", length(uniquePeps)) %>% print()
+k = sample(1:length(uniquePeps), n)
 chosenPCP = allPCP %>%
-    dplyr::filter(pepSeq %in% c(chosenPeps, substrateSeq)) # add the substrate
+    dplyr::filter(pepSeq %in% c(uniquePeps[k], substrateSeq)) # add the substrate
+# chosenPCP = allPCP %>%
+#     dplyr::filter(pepSeq %in% c(chosenPeps, substrateSeq)) # add the substrate
 
 # ----- build graph -----
 # NOTE: nodes should be PEPTIDES! edges can account for all positions!
@@ -139,7 +139,7 @@ paste0("number of reactions (all possible): ", nrow(allPCP)) %>% print()
 # filter out reactions where neither reactant nor products are observed
 reactions = allPCP %>%
     # !!!!!!!!!!!!!!!!!!!!
-    dplyr::filter(reactant_1_seq %in% chosenPCP$pepSeq & (product_1_seq %in% chosenPCP$pepSeq | product_2_seq %in% chosenPCP$pepSeq)) %>% 
+    # dplyr::filter(reactant_1_seq %in% chosenPCP$pepSeq & (product_1_seq %in% chosenPCP$pepSeq | product_2_seq %in% chosenPCP$pepSeq)) %>% 
     # !!!!!!!!!!!!!!!!!!!!
     dplyr::filter(reactant_1_detected | product_1_detected | product_2_detected) %>%
     dplyr::mutate(reaction_ID = 1:n())
@@ -242,8 +242,8 @@ plot_ma = out_MA %>%
   scale_color_manual(values = cols, "component") +
   xlim(c(0,4)) +
   labs(x='time (h)',y='concentration') + 
-  ggtitle("simulated kinetics - mass action")
-#   theme(legend.position = "none")
+  ggtitle("simulated kinetics - mass action") +
+  theme(legend.position = "none")
 plot_ma
 
 ggsave(paste0("data/simulation/",OUTNAME,"_MA.png"),
@@ -294,3 +294,4 @@ save(DATA_MA, file = paste0("data/simulation/",OUTNAME,"_MA_DATA.RData"))
 #             reactions = reactions$rate_name,
 #             info = reactions)
 # save(DATA_MM, file = paste0("data/simulation/",OUTNAME,"_MM_DATA.RData"))
+

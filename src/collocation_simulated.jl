@@ -32,12 +32,13 @@ include("_plot_utils_NN.jl")
 Random.seed!(42)
 print(Threads.nthreads())
 
-protein_name = "Ex4_15s"
+protein_name = "Ex4_15s_newdu"
 OUTNAME = "fit_MA_with_MA"
 folderN = "results/collocation/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
 
 eps = 1e-06
+h = 0.501
 
 # ----- INPUT -----
 R"load(paste0('data/simulation/Ex4_15s_MA_DATA.RData'))"
@@ -68,52 +69,41 @@ tp = tporig[tporig .> 0]
 Xm = Array{Float64}(X[2:size(X)[1],:])
 
 
-# --------------------------------
-# ----- try data collocation -----
-# --------------------------------
-# ----- choose kernel -----
-# TODO: try different bandwidths
 
-mt = length(tporig) # number of time points
-h = mt^(-1/5)*mt^(-3/35)*log(mt)^(-1/16)
+# ----- get species where initial du is 0 -----
+initialdus = []
+m = exp.(A*log.(X'.+eps))
+for i in 1:100
+    psim = rand(Gamma(1,1), nP)
+    dusim = N*Diagonal(psim)*m
 
-kernels = [EpanechnikovKernel(), UniformKernel(), TriangularKernel(), QuarticKernel(), TriweightKernel(), 
-TricubeKernel(), DiffEqFlux.GaussianKernel(), DiffEqFlux.CosineKernel(), LogisticKernel(), SigmoidKernel(), SilvermanKernel()]
-
-pp = []
-for kernel in kernels
-
-    ks = string(kernel)
-    print(ks)
-
-    # get estimates of du and u
-    # du, u = @time collocate_data(Xm', tp, kernel, h+0.01) # from DiffEqFlux, DiffEqParamEstim packages
-    du, u = @time collocate_data(X', tporig, kernel, h+0.001) # from DiffEqFlux, DiffEqParamEstim packages
-
-    # calculate error
-    err = mean(abs2.(vec(X'.-u)))
-
-    # plot
-    pl1 = plot(tporig, X, lc=:black, title="u, "*ks*", error="*string(round(err;digits=2)), legend=false, xlabel = "digestion time [hrs]", ylabel = "signal (u)", dpi=600, margin=5mm)
-    plot!(tporig, u', lc=:red)
-    pl2 = plot(tporig, du', lc=:red, title = "du, "*ks,legend=false, xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
-    pl = plot(pl1,pl2, layout = (1,2))
-
-    push!(pp, pl)
+    push!(initialdus, dusim[:,1])
 end
-ppp = plot(pp...; size = default(:size) .* (1,11), layout=(11,1), dpi = 600, margin=10mm)
-savefig(ppp, folderN*"estimated_abundance.pdf")
+initialdus = mapreduce(permutedims, vcat, initialdus)
+boxplot(initialdus, legend=false)
+μ_init = mapslices(x -> mean(skipmissing(x)), initialdus, dims=1)
 
-# TriweightKernel
+# 2-hop distance from substrate
+k = vec(abs.(μ_init) .< 0.01)
+print(species[k])
+# 1-hop distance from substrate
+k2 = vec(abs.(μ_init) .> 0.01)
+print(species[k2])
+
+
 
 # ----- collocation -----
-du, u = @time collocate_data(X', tporig, TriweightKernel(), h+0.001) # from DiffEqFlux, DiffEqParamEstim packages
+du, u = @time collocate_data(X', tporig, TriweightKernel(), h) # from DiffEqFlux, DiffEqParamEstim packages
+du[k,1] .= 0.0
 
 pl1 = plot(tporig, X, lc=:black, title="u", legend=false, xlabel = "digestion time [hrs]", ylabel = "signal (u)", dpi=600, margin=5mm)
 plot!(tporig, u', lc=:red)
 pl2 = plot(tporig, du', lc=:red, title = "du",legend=false, xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
 pl = plot(pl1,pl2, layout = (1,2))
 savefig(pl, folderN*"estimated_abundance_chosen.png")
+
+
+
 
 # -----------------------
 # ----- NN solution -----
@@ -172,6 +162,7 @@ end
 function loss_function(model, ps, st, data)
     y_pred, st = Lux.apply(model, data[1], ps, st)
     mse_loss = sqrt(mean(abs2, y_pred .- data[2]))
+    # sls_loss = sum(abs2, y_pred .- data[2])
     return mse_loss, st, ()
 end
 
@@ -219,6 +210,8 @@ end
 diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, true)
 
 print("done")
+
+
 
 # # -----------------------------
 # # ----- Bayesian solution -----
