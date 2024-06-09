@@ -14,7 +14,7 @@ Nmax = 40
 protein_name = "IDH1_WT"
 
 # ----- INPUT -----
-load(paste0("results/graphs/",protein_name,"_v5-MM.RData"))
+load(paste0("results/graphs/",protein_name,"_v6-MA.RData"))
 finalK = DATA$finalK
 substrateSeq = finalK$substrateSeq[1]
 L = nchar(substrateSeq)
@@ -37,15 +37,15 @@ intTbl = finalK %>%
   dplyr::mutate(biological_replicate = paste0("replicate_",biological_replicate))
 
 SIGNAL = intTbl %>%
-  dplyr::select(positions, biological_replicate, digestTime, intensity) %>%
-  dplyr::rename(species = positions)
+  dplyr::select(pepSeq, biological_replicate, digestTime, intensity) %>%
+  dplyr::rename(species = pepSeq)
 
 # sanity check
 intTbl$digestTime %>% unique()
 
 # ----- substrate degradation -----
 substrate = substrateTbl %>%
-  dplyr::mutate(species = paste0("1_",L),
+  dplyr::mutate(species = substrateSeq,
                 productType = "PCP") %>%
   dplyr::rename(intensity = mean_int) %>%
   dplyr::mutate(digestTime = as.numeric(digestTime),
@@ -64,9 +64,16 @@ reps = SIGNAL$biological_replicate %>% unique()
 times = SIGNAL$digestTime %>% unique()
 
 missing = DATA$species[!DATA$species %in% unique(SIGNAL$species)]
-Ns = apply(str_split_fixed(missing, "_", Inf), 2, as.numeric) 
-Ns = Ns[,2]-Ns[,1]+1
-validLength = Ns >= Nmin & Ns <= Nmax
+Ns = lapply(missing, function(pep){
+  str_locate_all(substrateSeq, pep)[[1]] %>%
+    as_tibble() %>%
+    dplyr::mutate(species = pep,
+                  N = end-start+1)
+}) %>%
+  rbindlist() %>%
+  dplyr::distinct(species, N)
+
+validLength = Ns$N >= Nmin & Ns$N <= Nmax
 table(validLength)
 
 
@@ -117,8 +124,9 @@ DATA$timepoints = dimnames(S)[[1]] %>% as.numeric()
 DATA$replicates = dimnames(S)[[3]]
 DATA$species = species
 DATA$reactions = rownames(A)
-DATA$rates = c(DATA$REACTIONS$rate_1_name, DATA$REACTIONS$rate_2_name)
+DATA$rates = DATA$REACTIONS$rate_name
+# DATA$rates = c(DATA$REACTIONS$rate_1_name, DATA$REACTIONS$rate_2_name)
 DATA$A = A
 DATA$B = B
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v5-MM.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v6-MA.RData"))

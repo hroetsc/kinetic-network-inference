@@ -2,6 +2,8 @@
 # description:  utility functions for graph construction
 # author:       HPR
 
+substr_vec = Vectorize(substr, vectorize.args = c("start","stop"))
+substr_vec_all = Vectorize(substr, vectorize.args = c("x","start","stop"))
 
 # ----- get all possible non-spliced peptides -----
 getAllPCPs = function(L, Nmin, Nmax, S) {
@@ -25,7 +27,8 @@ getAllPCPs = function(L, Nmin, Nmax, S) {
   pcpall = rbindlist(list(pcp, sub), use.names = T) %>%
     as_tibble() %>%
     unique() %>%
-    dplyr::mutate(N = P1-P1_+1)
+    dplyr::mutate(N = P1-P1_+1,
+                  pepSeq = substr_vec(S, P1_, P1))
   
   return(pcpall)
 }
@@ -72,18 +75,6 @@ getPositions = function(DB) {
   
   
   return(list(pcp = pcp, psp = psp))
-}
-
-
-# ----- get PCP clevage templates -----
-cleavageTemplate = function(Nmin, Nmax, L) {
-  
-  cleave = lapply(2:L, function(N) {
-    seq(1,N-1)
-  })
-  names(cleave) = 2:L
-  
-  return(cleave)
 }
 
 
@@ -159,91 +150,74 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
   subnode = paste0("1_",L)
 
   # get positions
-  allpcp = getAllPCPs(L,Nmin,Nmax,S)
+  allpcp = getAllPCPs(L,Nmin,Nmax,S) %>%
+    dplyr::mutate(validLength = N %in% seq(Nmin, Nmax))
   pos = getPositions(DB)
   
   # ----- PCP graph -----
   pcp = allpcp %>%
     as_tibble() %>%
     dplyr::mutate(validLength = N >= Nmin & N <= Nmax,
-                  detected = P1.P1_ %in% pos$pcp$P1.P1_)
-  cleavage_template = cleavageTemplate(Nmin,Nmax,L)
+                  detected = pepSeq %in% pos$pcp$pepSeq) %>%
+    dplyr::group_by(pepSeq, N, validLength, detected) %>%
+    dplyr::reframe(positions = paste(P1.P1_, collapse = ";"),
+                    P1 = paste(P1, collapse = ";"),
+                    P1_ = paste(P1_, collapse = ";")) %>%
+    dplyr::arrange(N) %>%
+    dplyr::filter(N > 1)
   
   table(pcp$validLength, pcp$detected)
-
-  # ----- cleave the substrate
-  # st = 1
-  # en = L
-  # reactant = subnode
-  # reactant_detected = TRUE
-  # HOP1 = lapply(cleavage_template[[as.character(L)]], function(c) {
-      
-  #     abs_site = st+c-1
-  #     k1 = which(pcp$P1_ == st & pcp$P1 == abs_site)
-  #     k2 = which(pcp$P1_ == abs_site+1 & pcp$P1 == en)
-      
-  #     product_detected = sapply(c(k1,k2), function(j) {
-  #       pcp$detected[j]
-  #     }) %>% as.vector()
-      
-  #     # reactant --> product
-  #     PCP = data.table(cleavage_site_abs = abs_site, cleavage_site = c,
-  #                      reactant_1 = reactant, reactant_2 = NA,
-  #                      reactant_1_valid = TRUE, reactant_2_valid = NA,
-  #                      product_1_valid = pcp$validLength[k1], product_2_valid = pcp$validLength[k2],
-  #                      reactant_1_detected = reactant_detected, reactant_2_detected = NA,
-  #                      product_1 = pcp$P1.P1_[k1], product_2 = pcp$P1.P1_[k2],
-  #                      product_1_detected = product_detected[1], product_2_detected = product_detected[2])
-  #     return(PCP)
-  #   }) %>%
-  #     rbindlist()
-
-  # # ----- only direkt cleavage products of the substrate are allowed as precursors
-  # longpcp = pcp %>%
-  #   dplyr::filter(P1.P1_ %in% c(subnode, HOP1$product_1, HOP1$product_2)) %>%
-  #   dplyr::filter(N >= (Nmin+1) & (N <= (2*Nmax) | N == L)) %>%
-  #   dplyr::arrange(N)  # important!!!
-
-  longpcp = pcp %>%
-    # dplyr::filter(detected | P1.P1_ %in% c(subnode, HOP1$product_1, HOP1$product_2)) %>%
-    dplyr::filter(N >= (Nmin+1) & (N <= (2*Nmax) | N == L)) %>%
-    dplyr::arrange(N)  # important!!!
   
   # search for products that could result from cleavage of parental (long) PCPs
-  COORD_pcp = mclapply(1:nrow(longpcp), function(k){
+  COORD_pcp = mclapply(1:nrow(pcp), function(i){
     
-    en = longpcp$P1[k]
-    st = longpcp$P1_[k]
-    N = longpcp$N[k]
+    cnt = pcp[i,] %>%
+        tidyr::separate_rows(positions, P1, P1_, sep = ";")
+
+    en = cnt$P1 %>% as.numeric()
+    st = cnt$P1_ %>% as.numeric()
+    N = pcp$N[i]
     
-    reactant = longpcp$P1.P1_[k]
-    reactant_detected = longpcp$detected[k]
+    reactant = cnt$positions
+    reactantSeq = pcp$pepSeq[i]
+    reactant_detected = pcp$detected[i]
+    reactant_valid = pcp$validLength[i]
     
-    cleave = cleavage_template[[as.character(N)]]
-    
+    # get all possible cleavage sites
+    cleave = seq(1,N-1)
+
     # get products resulting from cleavage of current PCP
-    PCP = lapply(cleave, function(c) {
-      
-      abs_site = st+c-1
-      k1 = which(pcp$P1_ == st & pcp$P1 == abs_site)
-      k2 = which(pcp$P1_ == abs_site+1 & pcp$P1 == en)
-      
-      product_detected = sapply(c(k1,k2), function(j) {
-        pcp$detected[j]
-      }) %>% as.vector()
-      
-      # reactant --> product
-      PCP = data.table(cleavage_site_abs = abs_site, cleavage_site = c,
-                       reactant_1 = reactant, reactant_2 = NA,
-                       reactant_1_valid = TRUE, reactant_2_valid = NA,
-                       product_1_valid = pcp$validLength[k1], product_2_valid = pcp$validLength[k2],
-                       reactant_1_detected = reactant_detected, reactant_2_detected = NA,
-                       product_1 = pcp$P1.P1_[k1], product_2 = pcp$P1.P1_[k2],
-                       product_1_detected = product_detected[1], product_2_detected = product_detected[2])
-      
-      return(PCP)
+    # iterate all coordinates of current reactant sequence
+    PCP = lapply(1:length(st), function(ii) {
+
+        PCP = lapply(cleave, function(c) {
+
+            abs_site = st[ii]+c-1
+            k1 = which(allpcp$P1_ == st[ii] & allpcp$P1 == abs_site)
+            k2 = which(allpcp$P1_ == abs_site+1 & allpcp$P1 == en[ii])
+            
+            product_detected = sapply(c(k1,k2), function(ki){
+                allpcp$pepSeq[ki] %in% pos$pcp$pepSeq
+            })
+            product_valid = allpcp$validLength[c(k1,k2)]
+
+            # reactant --> product
+            PCP = data.table(reactant_1 = reactant[ii], reactant_2 = NA,
+                            product_1 = allpcp$P1.P1_[k1], product_2 = allpcp$P1.P1_[k2],
+                            reactant_1_seq = reactantSeq, reactant_2_seq = NA,
+                            product_1_seq = allpcp$pepSeq[k1], product_2_seq = allpcp$pepSeq[k2],
+                            reactant_1_detected = reactant_detected, reactant_2_detected = NA,
+                            product_1_detected = product_detected[1], product_2_detected = product_detected[2],
+                            reactant_1_valid = reactant_valid, reactant_2_valid = NA,
+                            product_1_valid = product_valid[1], product_2_valid = product_valid[2],
+                            cleavage_site_abs = abs_site, cleavage_site = c)
+            
+            return(PCP)
+        }) %>%
+        rbindlist()
+
     }) %>%
-      rbindlist()
+        rbindlist()
     
     return(PCP)
   }, 
@@ -251,29 +225,58 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
   mc.cleanup = T,
   mc.cores = numCPU)
 
-  
+  allPCP = COORD_pcp %>%
+    data.table::rbindlist() %>%
+    as_tibble()
+
+
   # ----- PSP graph -----
-  psp = pos$psp %>%
+  allpsp = pos$psp %>%
+    dplyr::mutate(N = nchar(pepSeq))
+  psp = allpsp %>%
     dplyr::mutate(SR1 = paste0(Nterm,"_",P1),
                   SR2 = paste0(P1_,"_",Cterm)) %>%
     as_tibble() %>%
+    dplyr::group_by(pepSeq, N) %>%
+    dplyr::reframe(positions = paste(positions, collapse = ";"),
+                    P1 = paste(P1, collapse = ";"),
+                    P1_ = paste(P1_, collapse = ";"),
+                    SR1 = paste(SR1, collapse = ";"),
+                    SR2 = paste(SR2, collapse = ";")) %>%
     unique()
   
-  COORD_psp = mclapply(1:nrow(psp), function(k){
+
+  COORD_psp = mclapply(1:nrow(psp), function(i){
     
-    product = psp$positions[k]
-    
+    productSeq = psp$pepSeq[i]
+    cnt = psp[i,] %>%
+        tidyr::separate_rows(positions, P1, P1_, SR1, SR2, sep = ";")
+
     # PSP generated from PCP/substrate through splice
-    ki = which(pcp$P1.P1_ == psp$SR1[k])
-    kj = which(pcp$P1.P1_ == psp$SR2[k])
-    
-    # add to results
-    PSP = data.table(reactant_1 = pcp$P1.P1_[ki], reactant_2 = pcp$P1.P1_[kj],
-                     reactant_1_valid = pcp$validLength[ki], reactant_2_valid = pcp$validLength[kj],
-                     product_1_valid = TRUE, product_2_valid = NA,
-                     reactant_1_detected = pcp$detected[ki], reactant_2_detected = pcp$detected[kj],
-                     product_1 = product, product_2 = NA,
-                     product_1_detected = TRUE, product_2_detected = NA)
+    # iterate all positions of current psp
+    PSP = lapply(1:nrow(cnt), function(ii) {
+
+      ki = which(allpcp$P1.P1_ == cnt$SR1[ii])
+      kj = which(allpcp$P1.P1_ == cnt$SR2[ii])
+      
+      reactant_detected = sapply(c(ki,kj), function(kii){
+                allpcp$pepSeq[kii] %in% pos$pcp$pepSeq
+      })
+      reactant_valid = allpcp$validLength[c(ki,kj)]
+
+      # add to results
+      PSP = data.table(reactant_1 = allpcp$P1.P1_[ki], reactant_2 = allpcp$P1.P1_[kj],
+                            product_1 = cnt$positions[ii], product_2 = NA,
+                            reactant_1_seq = allpcp$pepSeq[ki], reactant_2_seq = allpcp$pepSeq[kj],
+                            product_1_seq = productSeq, product_2_seq = NA,
+                            reactant_1_detected = reactant_detected[1], reactant_2_detected = reactant_detected[2],
+                            product_1_detected = TRUE, product_2_detected = NA,
+                            reactant_1_valid = reactant_valid[1], reactant_2_valid = reactant_valid[2],
+                            product_1_valid = TRUE, product_2_valid = NA)
+
+      return(PSP)
+    }) %>%
+      rbindlist()
     
     return(PSP)
   }, 
@@ -286,18 +289,13 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
     as_tibble()
   
   # filter out not detected PCPs that are not used for splicing
-  allPCP = COORD_pcp %>%
-    data.table::rbindlist() %>%
-    as_tibble()
-
-  # FIXME!
+  paste0("all hydrolysis reactions: ", nrow(allPCP)) %>% print()
   allPCP = allPCP %>%
     dplyr::mutate(product_1_sr = product_1 %in% allPSP$reactant_1,
                   product_2_sr = product_2 %in% allPSP$reactant_2) %>%
-    dplyr::filter((product_1_detected & product_2_detected) | (product_1_sr | product_2_sr)) # NOTE: this also includes 1-hop distance nodes!
-    
-    # dplyr::filter(!((!product_1_detected & !product_1_sr & !reactant_1_hop1dist) | (!product_2_detected & !product_2_sr & !reactant_1_hop1dist)))
-    # reactant_1_hop1dist = reactant_1 %in% c(subnode, HOP1$product_1, HOP1$product_2)
+    dplyr::filter((product_1_detected | product_2_detected) | (product_1_sr | product_2_sr)) # NOTE: this also includes 1-hop distance nodes!
+  paste0("filtered hydrolysis reactions: ", nrow(allPCP)) %>% print()
+  
 
   # ----- build adjacency list -----
   ALL = rbindlist(
@@ -312,7 +310,7 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
                   reaction_ID = 1:n()) %>%
     as.data.table()
 
-  print(paste0("number of reactions: ",nrow(ALL)))
+  print(paste0("total number of reactions: ",nrow(ALL)))
   
   # ensure that all products are connected to substrate node
   # adjacency list
