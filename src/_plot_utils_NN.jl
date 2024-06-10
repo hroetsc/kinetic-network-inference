@@ -75,7 +75,7 @@ function diagnostics_and_save_NN_sim(tstate, y_pred, ma=false, steps=50)
             end
 
             # plot du
-            pldu = plot(tporig, du[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
+            pldu = plot(tporig, du[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
             plot!(tporig, y_pred[i,:], lc=:red, label="predicted")
 
             # combine
@@ -93,10 +93,12 @@ end
 
 # ----- simulated data - repeats -----
 function diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, ma=false, steps=50)
-
+    
+    du = du_intps_d
     nr = length(tstates)
     mt = length(tporig)
     pal = palette(:bamako, nr+1)
+    tp_ypred = tporig
 
     # ----- loss
     print("loss....\n")
@@ -118,6 +120,9 @@ function diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, ma=false, st
     μ_pinf, q25_pinf, q75_pinf = get_my_quantiles(pinf, nothing, 1, true)
     ribbon_pinf = (q75_pinf .- q25_pinf) ./ 2
 
+    print("\nnegative parameters:\n")
+    print(paramNames[vec(μ_pinf) .< 0])
+    print("\n")
 
     # ----- plot metrics -----
     sc = scatter(p0, μ_pinf', yerror = ribbon_pinf,
@@ -126,9 +131,9 @@ function diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, ma=false, st
     xlabel = "true parameter", ylabel = "predicted parameter", xlim = (minimum(pinf)-0.1,maximum(pinf)+0.1), ylim = (minimum(pinf)-0.1,maximum(pinf)+0.1), dpi=600)
     Plots.abline!(sc, 1, 0, line=:dash, lc=:black)
 
-    
     pl1 = plot(sc, ls, layout=(1,2))
     savefig(pl1, folderN*"training_metrics.png")
+
 
     # ---- simulate ODE with parameters -----
     # more fine-grained time steps
@@ -154,8 +159,8 @@ function diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, ma=false, st
     end
     
     # predicted du
-    YPREDU = reshape(mapreduce(permutedims, vcat, ypreds), mt, nr, s)
-    YPREDU_μ, YPREDU_q25, YPREDU_q75 = get_my_quantiles(YPREDU, mt, 2)
+    YPREDU = reshape(mapreduce(permutedims, vcat, ypreds), length(tp_ypred), nr, s)
+    YPREDU_μ, YPREDU_q25, YPREDU_q75 = get_my_quantiles(YPREDU, length(tp_ypred), 2)
     
     # actual plot
     rm(folderN*"simulated.pdf", force=true, recursive=true)
@@ -183,8 +188,8 @@ function diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, ma=false, st
             end
 
             # plot du
-            pldu = plot(tporig, du[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
-            plot!(tporig, YPREDU_μ[i,:], ribbon=ribbon_ypredu, fillalpha=0.3, lc=:red, label="predicted")
+            pldu = plot(tp_ypred, du[i,:], lc=:orange, title = species[i], label="interp", xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
+            plot!(tp_ypred, YPREDU_μ[i,:], ribbon=ribbon_ypredu, fillalpha=0.3, lc=:red, label="predicted")
             if ma
                 plot!(tporig, ducorrect[i,:], lc=:blue, label="real par")
             end

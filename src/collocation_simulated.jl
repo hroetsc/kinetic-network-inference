@@ -9,6 +9,8 @@ using OrdinaryDiffEq
 using DiffEqFlux
 using Lux
 using Optimisers
+using BSplineKit
+using FiniteDifferences
 using Zygote, Sundials, LSODA
 using StatsPlots
 using Plots
@@ -32,7 +34,7 @@ include("_plot_utils_NN.jl")
 Random.seed!(42)
 print(Threads.nthreads())
 
-protein_name = "Ex4_15s_newdu"
+protein_name = "Ex4_20s_spline"
 OUTNAME = "fit_MA_with_MA"
 folderN = "results/collocation/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
@@ -40,8 +42,9 @@ mkpath(folderN)
 eps = 1e-06
 h = 0.501
 
+
 # ----- INPUT -----
-R"load(paste0('data/simulation/Ex4_15s_MA_DATA.RData'))"
+R"load(paste0('data/simulation/Ex4_20s_MA_DATA.RData'))"
 @rget DATA_MA;
 DATA = DATA_MA
 
@@ -67,6 +70,7 @@ nP = length(paramNames)
 tspan = [minimum(tporig), maximum(tporig)]
 tp = tporig[tporig .> 0]
 Xm = Array{Float64}(X[2:size(X)[1],:])
+tpm = tporig[tporig .> 0]
 
 
 
@@ -89,6 +93,44 @@ print(species[k])
 # 1-hop distance from substrate
 k2 = vec(abs.(μ_init) .> 0.01)
 print(species[k2])
+
+m = exp.(A*log.(X'.+eps))
+ducorrect = N*Diagonal(p0)*m
+
+
+# ----- get du via interpolation -----
+fdm = central_fdm(5, 1)
+tpoints = collect(range(0.0,4.0,50))
+
+function iterpolation(si, tpoints)
+    intp = interpolate(tporig, vec(X[:,si]'), BSplineOrder(4))
+    uintp = [intp(t) for t in tpoints]
+    duintp = [fdm(intp, t) for t in tpoints]
+
+    return uintp, duintp
+end
+
+uintps = []
+duintps = []
+for si in 1:s
+    uintp_i, duintp_i = iterpolation(si, tpoints)
+    push!(uintps, uintp_i)
+    push!(duintps, duintp_i)
+end
+
+u_intps = mapreduce(permutedims, vcat, uintps)
+du_intps = mapreduce(permutedims, vcat, duintps)
+
+du_intps[:,50] .= du_intps[:,49]
+du_intps[:,1] .= du_intps[:,2]
+du_intps[k,1] .= 0.0
+
+closest_indices = [findmin(abs.(tpoints .- tpo))[2] for tpo in tporig]
+du_intps_d = du_intps[:,closest_indices]
+
+# errdu_d = mean(abs2.(vec(ducorrect[:,2:5] - du_intps_d)))
+errdu_d = mean(abs2.(vec(ducorrect - du_intps_d)))
+print("\nerror on u: "*string(round(errdu_d;digits=2))*"\n")
 
 
 
@@ -125,12 +167,13 @@ Lux.initialstates(::AbstractRNG, ::MALayer) = NamedTuple()
 
 function (MALayer::MALayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
 
-    p = ps .+ rand(Uniform(-1e-02, 1e-02), nP)
+    p = ps #.+ rand(Uniform(-1e-02, 1e-02), nP)
 
     m = exp.(A*log.(x.+eps))
     du = N*Diagonal(p)*m
     return du, st
 end
+
 
 # ----- construct neural net - Michaelis-Menten -----
 struct MMLayer{F1} <: Lux.AbstractExplicitLayer
@@ -157,6 +200,8 @@ function (MMLayer::MMLayer)(x::AbstractMatrix, ps, st::NamedTuple, A=A, N=N)
     du = N*((Diagonal(vmax)*m) ./ (Km .+ m))
     return du, st
 end
+
+
 
 # ----- training functions -----
 function loss_function(model, ps, st, data)
@@ -186,7 +231,8 @@ end
 # ----- train and predict -----
 model = Chain(MALayer(;dims=nP))
 rng = MersenneTwister(42)
-opt = Optimisers.Adam(0.00001)
+opt = Optimisers.Adam(0.0001)
+epochs = 10000
 
 dev_cpu = cpu_device()
 dev_gpu = gpu_device()
@@ -198,7 +244,9 @@ for i in 1:10
     tstate = Lux.Experimental.TrainState(rng, model, opt)
     vjp_rule = AutoZygote()
 
-    tstate, loss = @time main(tstate, vjp_rule, (X', du), 100000)
+    # tstate, loss = @time main(tstate, vjp_rule, (X', du), epochs)
+    # ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(X'), tstate.parameters, tstate.states)[1])
+    tstate, loss = @time main(tstate, vjp_rule, (X', du_intps_d), epochs)
     ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(X'), tstate.parameters, tstate.states)[1])
 
     # append to list

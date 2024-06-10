@@ -12,7 +12,7 @@ theme_set(theme_classic())
 numCPU = 4
 
 n = 20
-OUTNAME = "Ex4_20s"
+OUTNAME = "Ex4_8s"
 tpoints = seq(0,4,0.05)
 tpoints_coarse = seq(0,4,1)
 
@@ -20,10 +20,10 @@ chosenPeps = c(
     "INFER", "ENCEEVERYDAYANDNIGHT",
     "IN", "FERENCEEVERYDAYANDNIGHT",
     "INFERENCE", "EVERYDAYANDNIGHT",
-    "INFERENCEEVERY", "DAYANDNIGHT",
-    "INFERENCEEVERYDAY", "ANDNIGHT",
-    "INFERENCEEVERYDAYAND", "NIGHT",
-    "INF", "ERENCEEVERYDAYANDNIGHT"
+    "INFERENCEEVERY", "DAYANDNIGHT"
+    # "INFERENCEEVERYDAY", "ANDNIGHT",
+    # "INFERENCEEVERYDAYAND", "NIGHT",
+    # "INF", "ERENCEEVERYDAYANDNIGHT"
 )
 
 
@@ -57,14 +57,15 @@ mc.cores = numCPU)
 allPCP <- data.table::rbindlist(allPCP) %>%
     dplyr::mutate(N = nchar(pepSeq))
 
-set.seed(893)
-uniquePeps = allPCP$pepSeq %>% unique()
-paste0("number of unique peptides: ", length(uniquePeps)) %>% print()
-k = sample(1:length(uniquePeps), n)
-chosenPCP = allPCP %>%
-    dplyr::filter(pepSeq %in% c(uniquePeps[k], substrateSeq)) # add the substrate
+# set.seed(893)
+# uniquePeps = allPCP$pepSeq %>% unique()
+# paste0("number of unique peptides: ", length(uniquePeps)) %>% print()
+# k = sample(1:length(uniquePeps), n)
 # chosenPCP = allPCP %>%
-#     dplyr::filter(pepSeq %in% c(chosenPeps, substrateSeq)) # add the substrate
+#     dplyr::filter(pepSeq %in% c(uniquePeps[k], substrateSeq)) # add the substrate
+
+chosenPCP = allPCP %>%
+    dplyr::filter(pepSeq %in% c(chosenPeps, substrateSeq)) # add the substrate
 
 # ----- build graph -----
 # NOTE: nodes should be PEPTIDES! edges can account for all positions!
@@ -139,7 +140,7 @@ paste0("number of reactions (all possible): ", nrow(allPCP)) %>% print()
 # filter out reactions where neither reactant nor products are observed
 reactions = allPCP %>%
     # !!!!!!!!!!!!!!!!!!!!
-    # dplyr::filter(reactant_1_seq %in% chosenPCP$pepSeq & (product_1_seq %in% chosenPCP$pepSeq | product_2_seq %in% chosenPCP$pepSeq)) %>% 
+    dplyr::filter(reactant_1_seq %in% chosenPCP$pepSeq & (product_1_seq %in% chosenPCP$pepSeq | product_2_seq %in% chosenPCP$pepSeq)) %>% 
     # !!!!!!!!!!!!!!!!!!!!
     dplyr::filter(reactant_1_detected | product_1_detected | product_2_detected) %>%
     dplyr::mutate(reaction_ID = 1:n())

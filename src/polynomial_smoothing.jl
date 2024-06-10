@@ -5,7 +5,6 @@
 using DiffEqParamEstim
 using OrdinaryDiffEq
 using DiffEqFlux
-using FiniteDifferences
 using Lux
 using Optimisers
 using Zygote
@@ -60,8 +59,9 @@ nP = length(paramNames)
 tspan = [minimum(tporig), maximum(tporig)]
 tps = collect(range(0.0,tspan[2],50))
 Xm = Array{Float64}(X[2:size(X)[1],:])
+tpm = tporig[tporig .> 0]
 
-# TODO: set kernel to 1
+
 
 # ----- get du with real parameters -----
 m = exp.(A*log.(X'.+eps))
@@ -245,62 +245,93 @@ for h in selected_bandwidths
 end
 
 
-# ----- numeric differentiation -----
 
 
-ducorrect
-
-FiniteDifferences.finite_difference_derivative(Xnum)
-
-
-
-f(s) = Xnum[s,:]
+# ------- attempt 2 ------
+using BSplineKit
+using FiniteDifferences
 fdm = central_fdm(5, 1)
-fdm(f, 1)
 
+# tpoints = [0.0, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+tpoints = collect(range(0.5,4.0,50))
 
-using FiniteDiff
-f(s) = Xnum[s,:]
-FiniteDiff.finite_difference_derivative(f, 1)
-FiniteDiff.finite_difference_derivative(Xnum)
+function iterpolation(si, tpoints)
+    intp = interpolate(tporig, vec(X[:,si]'), BSplineOrder(4))
+    # extp = extrapolate(intp[1])
+    # plot(tporig, vec(X[:,s]'))
+    # plot!(intp)
+    uintp = [intp(t) for t in tpoints]
+    duintp = [fdm(intp, t) for t in tpoints]
 
-
-
-data = copy(Xnum)
-tpoints = copy(tporig)
-
-
-construct_t1(t, tpoints) = hcat(ones(eltype(tpoints), length(tpoints)), tpoints .- t)
-construct_t2(t, tpoints) = hcat(ones(eltype(tpoints), length(tpoints)), tpoints .- t, (tpoints .- t) .^ 2)
-
-function my_data_collocation(data, tpoints)
-    _one = oneunit(first(data))
-    _zero = zero(first(data))
-    e1 = [_one; _zero]
-    e2 = [_zero; _one; _zero]
-    n = length(tpoints)
-    W = Diagonal(repeat([eps], n))
-
-    Wd = similar(data, n, size(data, 1))
-    WT1 = similar(data, n, 2)
-    WT2 = similar(data, n, 3)
-    T2WT2 = similar(data, 3, 3)
-    T1WT1 = similar(data, 2, 2)
-    x = map(tpoints) do _t
-        T1 = construct_t1(_t, tpoints)
-        T2 = construct_t2(_t, tpoints)
-        mul!(Wd, W, data')
-        mul!(WT1, W, T1)
-        mul!(WT2, W, T2)
-        mul!(T2WT2, T2', WT2)
-        mul!(T1WT1, T1', WT1)
-        (e2' * ((T2' * WT2) \ T2')) * Wd, (e1' * ((T1' * WT1) \ T1')) * Wd
-    end
-    estimated_derivative = mapreduce(xᵢ -> transpose(first(xᵢ)), hcat, x)
-    estimated_solution = mapreduce(xᵢ -> transpose(last(xᵢ)), hcat, x)
-    return estimated_derivative, estimated_solution
+    return uintp, duintp
 end
 
 
-du, u = @time my_data_collocation(X', tporig)
+uintps = []
+duintps = []
+for si in 1:s
+    uintp_i, duintp_i = iterpolation(si, tpoints)
+    push!(uintps, uintp_i)
+    push!(duintps, duintp_i)
+end
 
+u_intps = mapreduce(permutedims, vcat, uintps)
+du_intps = mapreduce(permutedims, vcat, duintps)
+
+du_intps[:,50] .= du_intps[:,49]
+# du_intps[:,1] .= du_intps[:,2]
+# du_intps[k,1] .= 0.0
+
+
+closest_indices = [findmin(abs.(tpoints .- tpo))[2] for tpo in tpm]
+du_intps_d = du_intps[:,closest_indices]
+
+errdu_d = mean(abs2.(vec(ducorrect[:,2:5] - du_intps_d)))
+print("\nerror on u: "*string(round(errdu_d;digits=2))*"\n")
+
+
+# --- plot all
+h = 0.501
+# get estimates of du and u
+du, u = @time collocate_data(X', tporig, TriweightKernel(), 0.54) # from DiffEqFlux, DiffEqParamEstim packages
+du[k,1] .= 0.0
+
+# plot for each species
+rm(folderN*"kernel+numericDiff.pdf", force=true, recursive=true)
+chunkSize = 28
+counter = 1
+
+while counter <= s
+    pp = []
+    if counter+chunkSize-1 > s
+        en = s
+    else
+        en = counter+chunkSize-1
+    end
+    print(en)
+
+    for i in counter:en
+        # plot u
+        plu = plot(tporig, u[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
+        plot!(tporig, X[:,i], lc=:green, label="ground truth")
+        plot!(tps, integx[:,i], lc=:blue, label="real par")
+        plot!(tpoints, u_intps[i,:], lc=:orange, label="interp")
+
+        # plot du
+        pldu = plot(tporig, du[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
+        plot!(tporig, ducorrect[i,:], lc=:blue, label="real par")
+        plot!(tpoints, du_intps[i,:], lc=:orange, label="interp")
+        
+        # combine
+        push!(pp, plot(plu,pldu, layout = (1,2)))
+    end
+
+    pplot = plot(pp...; size = default(:size) .* (2,14), layout=(14,2), dpi = 600, margin=10mm)
+    savefig(pplot, folderN*"tmp.pdf")
+    append_pdf!(folderN*"kernel+numericDiff.pdf", folderN*"tmp.pdf", create=true, cleanup=true)
+    counter += chunkSize
+end
+
+
+# TODO: fit on this??
+# TODO: discard 0hrs from loss??
