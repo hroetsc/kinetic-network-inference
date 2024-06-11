@@ -3,13 +3,13 @@
 # author:       HPR
 # based on: https://doi.org/10.1515/sagmb-2020-0025 and https://doi.org/10.1198/016214508000000797
 
-# using Turing
-# using ApproxBayes
 using DiffEqParamEstim
 using OrdinaryDiffEq
 using DiffEqFlux
 using Lux
 using Optimisers
+using BSplineKit
+using FiniteDifferences
 using Zygote
 using StatsPlots
 using Plots
@@ -34,7 +34,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "IDH1_WT"
-OUTNAME = "nn_v8_newgraph"
+OUTNAME = "nn_v9_spline+ki"
 folderN = "results/collocation/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
 
@@ -65,10 +65,10 @@ paramNames = reactions
 nP = length(paramNames)
 
 tspan = [minimum(tporig), maximum(tporig)]
-tp = tporig[tporig .> 0]
-Xm = X[2:size(X)[1],:,:]
 Xn0 = replace(X, missing => 0.) # no missing values
 mt = length(tporig) # number of time points
+Xm = X[2:size(X)[1],:,:]
+tpm = tporig[tporig .> 0]
 
 # account for missing values
 kis = []
@@ -102,6 +102,50 @@ print(length(k))
 k2 = vec(abs.(μ_init) .> 0.01)
 print(species[k2])
 print(length(k2))
+
+
+# ----- get du via interpolation -----
+fdm = central_fdm(5, 1)
+tpoints = collect(range(0.0,tspan[2],50))
+
+function iterpolation(si, ii, tpoints)
+    intp = interpolate(tporig, vec(Xn0[:,si,ii]'), BSplineOrder(4))
+    uintp = [intp(t) for t in tpoints]
+    duintp = [fdm(intp, t) for t in tpoints]
+
+    return uintp, duintp
+end
+
+
+du_intps_d = []
+for ii in 1:nr
+    uintps = []
+    duintps = []
+    for si in 1:s
+        uintp_i, duintp_i = iterpolation(si, ii, tpoints)
+        push!(uintps, uintp_i)
+        push!(duintps, duintp_i)
+    end
+
+    u_intps = mapreduce(permutedims, vcat, uintps)
+    du_intps = mapreduce(permutedims, vcat, duintps)
+
+    du_intps[:,50] .= du_intps[:,49]
+    du_intps[:,1] .= du_intps[:,2]
+    du_intps[k,1] .= 0.0
+
+    closest_indices = [findmin(abs.(tpoints .- tpo))[2] for tpo in tporig]
+    push!(du_intps_d,du_intps[:,closest_indices])
+end
+
+# uintp_i_tmp, duintp_i_tmp = iterpolation(3, 1, tpoints)
+# duintp_i_tmp[50] = duintp_i_tmp[49]
+# duintp_i_tmp[1] = duintp_i_tmp[2]
+# plot(tpoints, duintp_i_tmp)
+
+# something is wrong in the way the derivative is plotted!
+# species[3]
+# plot!(tporig, du_intps_d[1][3,:])
 
 
 # ----- collocation -----
@@ -146,8 +190,9 @@ end
 
 # ----- training functions -----
 function loss_function(model, ps, st, data)
-    y_pred, st = Lux.apply(model, data[1], ps, st)
-    mse_loss = sqrt(mean(abs2, y_pred .- data[2]))
+    ki = data[3] # index with no missing values
+    ypred, st = Lux.apply(model, data[1], ps, st)
+    mse_loss = sqrt(mean(abs2, vec(ypred)[ki] .- vec(data[2])[ki]))
     # sls_loss = sum(abs2, y_pred .- data[2])
     return mse_loss, st, ()
 end
@@ -188,14 +233,14 @@ for ii in 1:nr
     tstate = Lux.Experimental.TrainState(rng, model, opt)
     vjp_rule = AutoZygote()
 
-    tstate, loss = @time main(tstate, vjp_rule, (Xn0[:,:,ii]', dus[ii], kis[ii]), epochs)
+    tstate, loss = @time main(tstate, vjp_rule, (Xn0[:,:,ii]', du_intps_d[ii], kis[ii]), epochs)
     ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(Xn0[:,:,ii]'), tstate.parameters, tstate.states)[1])
     
     # save train state and predictions
     save_object(folderN*"tstate_rep"*string(ii)*".jld2", tstate)
     ypreddf = DataFrame(ypred, [:ypred0, :ypred1, :ypred2, :ypred3, :ypred4])
     ypreddf[!,:species] = species
-    dudf = DataFrame(dus[ii], [:du0, :du1, :du2, :du3, :du4])
+    dudf = DataFrame(du_intps_d[ii], [:du0, :du1, :du2, :du3, :du4])
     CSV.write(folderN*"pred_rep"*string(ii)*".csv", hcat(ypreddf,dudf))
 
     # append to list

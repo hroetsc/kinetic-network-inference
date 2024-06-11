@@ -68,7 +68,6 @@ paramNames = info.rate_name_ma
 nP = length(paramNames)
 
 tspan = [minimum(tporig), maximum(tporig)]
-tp = tporig[tporig .> 0]
 Xm = Array{Float64}(X[2:size(X)[1],:])
 tpm = tporig[tporig .> 0]
 

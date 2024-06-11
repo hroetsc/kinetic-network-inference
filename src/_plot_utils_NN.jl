@@ -212,6 +212,7 @@ end
 function diagnostics_and_save_NN(tstates, ypreds, losses, loss_only=false, blackbox=false, steps=10)
 
     pal = palette(:bamako, nr+1)
+    dus = du_intps_d
 
     # ----- loss
     print("loss....\n")
