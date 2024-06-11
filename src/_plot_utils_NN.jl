@@ -92,13 +92,14 @@ end
 
 
 # ----- simulated data - repeats -----
-function diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, ma=false, steps=50)
-    
+function diagnostics_and_save_NN_sim_multi(tstates, ypreds, ppreds, losses, ma=false, steps=50)
+
     du = du_intps_d
     nr = length(tstates)
     mt = length(tporig)
-    pal = palette(:bamako, nr+1)
     tp_ypred = tporig
+
+    pal = palette(:bamako, nr+1)
 
     # ----- loss
     print("loss....\n")
@@ -112,11 +113,12 @@ function diagnostics_and_save_NN_sim_multi(tstates, ypreds, losses, ma=false, st
 
 
     # ----- parameters -----
-    pinfs = []
-    for ii in 1:nr
-        push!(pinfs, tstates[ii].parameters)
-    end
-    pinf = mapreduce(permutedims, vcat, pinfs)
+    # pinfs = []
+    # for ii in 1:nr
+    #     push!(pinfs, tstates[ii].parameters)
+    # end
+    # pinf = mapreduce(permutedims, vcat, pinfs)
+    pinf = mapreduce(permutedims, vcat, ppreds)
     μ_pinf, q25_pinf, q75_pinf = get_my_quantiles(pinf, nothing, 1, true)
     ribbon_pinf = (q75_pinf .- q25_pinf) ./ 2
 
