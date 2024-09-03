@@ -22,9 +22,22 @@ tpoints = seq(0,4,0.01)
 tpoints_coarse = seq(0,4,1)
 
 set.seed(42)
+<<<<<<< HEAD
 rate_ma = runif(nrow(reactions), 0, 1)
 rate_vmax = runif(nrow(reactions), 0, 10)
 rate_km = runif(nrow(reactions), 0, 0.5)
+=======
+# rate_ma = reactions$rate_ma/5
+rate_ma = 0.25/reactions$rate_ma
+# rate_ma = runif(nrow(reactions), 0, 1)
+rate_vmax = runif(nrow(reactions), 0, 20)
+rate_km = runif(nrow(reactions), 0, 0.5)
+
+reactions = reactions %>%
+  dplyr::mutate(rate_ma = rate_ma,
+                rate_vmax = rate_vmax,
+                rate_km = rate_km)
+>>>>>>> b2d865efd38af0868f5a54c9e2ebf8232170e387
 
 # ----- build stochiometry matrix from adjacency list -----
 species = c(reactions$reactant1, reactions$reactant1, reactions$product1, reactions$product2) %>%
@@ -63,6 +76,8 @@ massAction <- function(t,X,p) {
   M = apply(t(X^t(A)), 1, prod)
   # calculate dX
   dX = t(B-A)%*%(p*M)
+<<<<<<< HEAD
+=======
   
   list(dX)
 }
@@ -76,10 +91,27 @@ michaelisMenten <- function(t,X,p) {
   Km = p[(r+1):(2*r)]
   # calculate dX
   dX = t(B-A)%*%((Vmax*m) / (Km+m))
+>>>>>>> b2d865efd38af0868f5a54c9e2ebf8232170e387
   
   list(dX)
 }
 
+<<<<<<< HEAD
+michaelisMenten <- function(t,X,p) {
+
+  # vector matrix exponentiation of x by A
+  m = apply(t(X^t(A)), 1, prod)
+
+  Vmax = p[1:r]
+  Km = p[(r+1):(2*r)]
+  # calculate dX
+  dX = t(B-A)%*%((Vmax*m) / (Km+m))
+  
+  list(dX)
+}
+
+=======
+>>>>>>> b2d865efd38af0868f5a54c9e2ebf8232170e387
 
 names(x0) = species
 
@@ -112,10 +144,16 @@ plot_ma = out_MA %>%
   ggtitle("simulated kinetics - mass action") +
   theme(legend.position = "none")
 plot_ma
+<<<<<<< HEAD
 
 ggsave("data/simulation/Ex3_MA.png",
        plot = plot_ma, height = 4, width = 5, dpi = "retina")
 
+=======
+
+ggsave("data/simulation/Ex3_MA.png",
+       plot = plot_ma, height = 4, width = 5, dpi = "retina")
+>>>>>>> b2d865efd38af0868f5a54c9e2ebf8232170e387
 
 plot_mm = out_MM %>%
   as_tibble() %>%
@@ -132,6 +170,7 @@ plot_mm
 ggsave("data/simulation/Ex3_MM.png",
        plot = plot_ma, height = 4, width = 5, dpi = "retina")
 
+<<<<<<< HEAD
 # ----- OUTPUT -----
 X = out_MA %>% as.matrix()
 X = X[X[,1] %in% tpoints_coarse, species]
@@ -139,6 +178,31 @@ DATA_MA = list(X = X[,species],
             x0 = X[1,species],
             A = A[reactions$rate_name,species],
             B = B[reactions$rate_name,species],
+=======
+plot_mm = out_MM %>%
+  as_tibble() %>%
+  tidyr::gather(variable,value,-time) %>%
+  ggplot(aes(x=time,y=value,color=variable))+
+  geom_line(linewidth=1.5)+
+  scale_color_manual(values = cols, "component") +
+  xlim(c(0,4)) +
+  labs(x='time (h)',y='concentration') + 
+  ggtitle("simulated kinetics - michaelis menten") +
+  theme(legend.position = "none")
+plot_mm
+
+ggsave("data/simulation/Ex3_MM.png",
+       plot = plot_ma, height = 4, width = 5, dpi = "retina")
+
+
+# ----- OUTPUT -----
+X_MA = out_MA %>% as.matrix()
+X_MA = X_MA[X_MA[,1] %in% tpoints_coarse, species]
+DATA_MA = list(X = X_MA[,species],
+            x0 = X_MA[1,species],
+            A = A[reactions$reaction_ID,species],
+            B = B[reactions$reaction_ID,species],
+>>>>>>> b2d865efd38af0868f5a54c9e2ebf8232170e387
             tp = tpoints_coarse,
             species = species,
             reactions = reactions$rate_name,
@@ -146,12 +210,21 @@ DATA_MA = list(X = X[,species],
 save(DATA_MA, file = "data/simulation/Ex3_MA_DATA.RData")
 
 
+<<<<<<< HEAD
 X = out_MM %>% as.matrix()
 X = X[X[,1] %in% tpoints_coarse, species]
 DATA_MA = list(X = X[,species],
             x0 = X[1,species],
             A = A[reactions$rate_name,species],
             B = B[reactions$rate_name,species],
+=======
+X_MM = out_MM %>% as.matrix()
+X_MM = X_MM[X_MM[,1] %in% tpoints_coarse, species]
+DATA_MM = list(X = X_MM[,species],
+            x0 = X_MM[1,species],
+            A = A[reactions$reaction_ID,species],
+            B = B[reactions$reaction_ID,species],
+>>>>>>> b2d865efd38af0868f5a54c9e2ebf8232170e387
             tp = tpoints_coarse,
             species = species,
             reactions = reactions$rate_name,

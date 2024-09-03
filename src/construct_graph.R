@@ -22,13 +22,19 @@ substrate_colour = "#6FA570"
 protein_name = "IDH1_WT"
 dir.create("results/graphs/", showWarnings = F, recursive = T)
 
+
 # ----- INPUT -----
 finalK = fread("data/IDH1_WT/IDH1_WT_finalKinetics.csv")
+substrateSeq = finalK$substrateSeq[1]
+
 
 # ----- preprocessing -----
 finalK = finalK %>%
   dplyr::filter(!is.na(substrateID)) %>%
   disentangleMultimappersType()
+# get I/L variants of PCPs!
+finalK = finalK %>%
+  dplyr::mutate(pepSeq = fifelse(productType == "PCP", substr(substrateSeq, as.numeric((str_extract(positions,"^[:digit:]+(?=_)"))), as.numeric((str_extract(positions,"(?<=_)[:digit:]+$")))), pepSeq))
 
 pepTbl = finalK %>%
   dplyr::distinct(substrateID, substrateSeq, productType, pepSeq, positions) %>%
@@ -38,46 +44,48 @@ L = nchar(pepTbl$substrateSeq[1])
 pepTbl$positions %>% unique() %>% length()
 pepTbl$pepSeq %>% unique() %>% length()
 
-
 # ----- graph and corresponding rates -----
 GRAPH = constructGraphNetwork(pepTbl, numCPU, Nmin, Nmax) %>%
   dplyr::mutate(reaction_ID = 1:n(),
-                rate_1_name = paste0("Vmax_",reaction_ID),
-                rate_2_name = paste0("Km_",reaction_ID))
+                rate_name = paste0("on_", reaction_ID))
+                # rate_1_name = paste0("Vmax_",reaction_ID),
+                # rate_2_name = paste0("Km_",reaction_ID))
 
-# # --- with off rates
-# # get off rates
-# OFF = GRAPH
-# nm = str_replace_all(names(GRAPH),"reactant_","x_")
-# nm = str_replace_all(nm ,"product_","reactant_")
-# nm = str_replace_all(nm ,"x_","product_")
-# names(OFF) = nm
+# --- with off rates
+# get off rates
+OFF = GRAPH
+nm = str_replace_all(names(GRAPH),"reactant_","x_")
+nm = str_replace_all(nm ,"product_","reactant_")
+nm = str_replace_all(nm ,"x_","product_")
+names(OFF) = nm
 
-# OFF = OFF %>%
-#   dplyr::mutate(rate_name = paste0("off_",reaction_ID))
+OFF = OFF %>%
+  dplyr::mutate(rate_name = paste0("off_",reaction_ID))
 
-# # combine
-# REACTIONS = list(GRAPH, OFF) %>%
-#   rbindlist(use.names = T, fill = T) %>%
+# combine
+REACTIONS = list(GRAPH, OFF) %>%
+  rbindlist(use.names = T, fill = T) %>%
+  dplyr::arrange(reaction_ID)
+
+# # --- without off rates
+# # NOTE: no off rates
+# REACTIONS = GRAPH %>%
 #   dplyr::arrange(reaction_ID)
 
-# --- without off rates
-# NOTE: no off rates
-REACTIONS = GRAPH %>%
-  dplyr::arrange(reaction_ID)
+psps = unique(pepTbl$pepSeq[pepTbl$productType == "PSP"])
 
 # plot
 coord_graph = REACTIONS %>%
-    dplyr::select(reactant_1, reactant_2, product_1, product_2) %>%
-    tidyr::gather(reactant_cat, reactant, -product_1, -product_2) %>% 
+    dplyr::select(reactant_1_seq, reactant_2_seq, product_1_seq, product_2_seq) %>%
+    tidyr::gather(reactant_cat, reactant, -product_1_seq, -product_2_seq) %>% 
     tidyr::gather(product_cat, product, -reactant_cat, -reactant) %>%
     dplyr::select(-reactant_cat, -product_cat) %>%
     na.omit() %>%
     as_tbl_graph() %>%
     activate(nodes) %>%
-    mutate(type = fifelse(str_detect(name,"^[:digit:]+_[:digit:]+$"), "PCP", "PSP"),
-           type = fifelse(name == paste0("1_",L), "substrate", type),
-           detected = name %in% c(pepTbl$positions, paste0("1_",L)))
+    mutate(type = fifelse(name %in% psps, "PSP", "PCP"),
+           type = fifelse(name == substrateSeq, "substrate", type),
+           detected = name %in% c(pepTbl$pepSeq, substrateSeq))
   
 grph = ggraph(coord_graph, layout = "kk") +
   geom_edge_diagonal(alpha = .2) +
@@ -92,8 +100,8 @@ ggsave(paste0("results/graphs/",protein_name,"_graph.pdf"), plot = grph,
 
 
 # ----- matrices -----
-species = c(REACTIONS$reactant_1, REACTIONS$reactant_2,
-            REACTIONS$product_1, REACTIONS$product_2) %>% na.omit() %>% unique()
+species = c(REACTIONS$reactant_1_seq, REACTIONS$reactant_2_seq,
+            REACTIONS$product_1_seq, REACTIONS$product_2_seq) %>% na.omit() %>% unique()
 reactions = paste0("rct_",REACTIONS$reaction_ID)
 s = length(species)
 r = length(reactions)
@@ -103,10 +111,10 @@ A = matrix(0, nrow = r, ncol = s)
 B = matrix(0, nrow = r, ncol = s)
 
 for (r in 1:nrow(REACTIONS)) {
-  A[r,which(species %in% c(REACTIONS$reactant_1[r],REACTIONS$reactant_2[r]))] <- 1
+  A[r,which(species %in% c(REACTIONS$reactant_1_seq[r],REACTIONS$reactant_2_seq[r]))] <- 1
 }
 for (r in 1:nrow(REACTIONS)) {
-  B[r,which(species %in% c(REACTIONS$product_1[r],REACTIONS$product_2[r]))] <- 1
+  B[r,which(species %in% c(REACTIONS$product_1_seq[r],REACTIONS$product_2_seq[r]))] <- 1
 }
 
 colnames(A) = species
@@ -116,7 +124,8 @@ colnames(B) = species
 rownames(B) = reactions
 
 # sanity check
-all(pepTbl$positions %in% species)
+all(pepTbl$pepSeq %in% species)
+
 
 # ----- OUTPUT -----
 DATA = list(A = A,
@@ -127,5 +136,5 @@ DATA = list(A = A,
             finalK = finalK,
             pepTbl = pepTbl)
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v5-MM.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v6-MA.RData"))
 

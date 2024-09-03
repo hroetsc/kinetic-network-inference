@@ -4,22 +4,29 @@ include("_plot_utils.jl")
 myquantile(A, p; dims, kwargs...) = mapslices(x->quantile(x, p; kwargs...), A; dims)
 myquantileslice(A, p; dims=nothing, kwargs...) = mapslices(x -> quantile(skipmissing(x), p; kwargs...), A; dims=dims)
 
-function get_my_quantiles(Z, mtt, dim)
-    μ = transpose(reshape(mapslices(x -> mean(skipmissing(x)), Z, dims=dim), mtt, s))
-    q25 = transpose(reshape(mapslices(x -> isempty(skipmissing(x)) ? NaN : quantile(skipmissing(x), 0.25), Z, dims=dim), mtt, s))
-    q75 = transpose(reshape(mapslices(x -> isempty(skipmissing(x)) ? NaN : quantile(skipmissing(x), 0.75), Z, dims=dim), mtt, s))
+function get_my_quantiles(Z, mtt, dim, param=false)
+    if !param
+        μ = transpose(reshape(mapslices(x -> mean(skipmissing(x)), Z, dims=dim), mtt, s))
+        q25 = transpose(reshape(mapslices(x -> isempty(skipmissing(x)) ? NaN : quantile(skipmissing(x), 0.25), Z, dims=dim), mtt, s))
+        q75 = transpose(reshape(mapslices(x -> isempty(skipmissing(x)) ? NaN : quantile(skipmissing(x), 0.75), Z, dims=dim), mtt, s))
+    else
+        μ = transpose(reshape(mapslices(x -> mean(skipmissing(x)), Z, dims=dim), nP))
+        q25 = transpose(reshape(mapslices(x -> isempty(skipmissing(x)) ? NaN : quantile(skipmissing(x), 0.05), Z, dims=dim), nP))
+        q75 = transpose(reshape(mapslices(x -> isempty(skipmissing(x)) ? NaN : quantile(skipmissing(x), 0.95), Z, dims=dim), nP))
+    end
     return μ,q25,q75
 end
 
+
 # ----- simulated data -----
-function diagnostics_and_save_NN_sim(tstate, y_pred, steps=50)
+function diagnostics_and_save_NN_sim(tstate, y_pred, ma=false, steps=50)
 
     pinf = tstate.parameters
 
     # ----- plot metrics -----
     sc = scatter(p0, pinf, legend=false, title="parameters", mc=:black,
-    xlabel = "true parameter", ylabel = "predicted parameter", xlim = (0,maximum(p0)+0.1), ylim = (0,maximum(p0)+0.1), dpi=600,
-    series_annotations = text.(reactions,p0))
+    # series_annotations = text.(paramNames,p0),
+    xlabel = "true parameter", ylabel = "predicted parameter", xlim = (minimum(pinf)-0.1,maximum(pinf)+0.1), ylim = (minimum(pinf)-0.1,maximum(pinf)+0.1), dpi=600)
     Plots.abline!(sc, 1, 0, line=:dash, lc=:black)
 
     ls = plot(loss, title = "training loss", ylim = (0,maximum(loss)*1.5),
@@ -30,29 +37,174 @@ function diagnostics_and_save_NN_sim(tstate, y_pred, steps=50)
 
     # ---- simulate ODE with parameters -----
     # more fine-grained time steps
-    tps = collect(range(0.0,tspan[2],steps))
-    problem = ODEProblem(massaction_stable, x0, tspan, pinf)
-    integ = solve(problem, TRBDF2(), saveat=tps)
-    integu = mapreduce(permutedims, vcat, integ.u)
+    if ma
+        # inferred parameters
+        tps = collect(range(0.0,tspan[2],steps))
+        problem = ODEProblem(massaction_stable, x0, tspan, pinf)
+        integ = solve(problem, TRBDF2(), saveat=tps)
+        integu = mapreduce(permutedims, vcat, integ.u)
+
+        # real parameters
+        problemx = ODEProblem(massaction_stable, x0, tspan, p0)
+        intex = solve(problemx, TRBDF2(), saveat=tps)
+        integx = mapreduce(permutedims, vcat, intex.u)
+
+    end
 
     # ----- plot -----
-    pp = []
-    for i in 1:s
-        
-        # plot u
-        plu = plot(tporig, u[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
-        plot!(tps, integu[:,i], lc=:red, label="predicted")
-        plot!(tporig, X[:,i], lc=:green, label="ground truth")
+    rm(folderN*"simulated.pdf", force=true, recursive=true)
+    chunkSize = 28
+    counter = 1
 
-        # plot du
-        pldu = plot(tporig, du[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
-        plot!(tporig, y_pred[i,:], lc=:red, label="predicted")
+    while counter <= s
+        pp = []
+        if counter+chunkSize-1 > s
+            en = s
+        else
+            en = counter+chunkSize-1
+        end
+        print(en)
 
-        # combine
-        push!(pp, plot(plu,pldu, layout = (1,2)))
+        for i in counter:en
+            # plot u
+            plu = plot(tporig, u[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
+            plot!(tporig, X[:,i], lc=:green, label="ground truth")
+            if ma
+                plot!(tps, integu[:,i], lc=:red, label="predicted")
+                plot!(tps, integx[:,i], lc=:blue, label="real par")
+            end
+
+            # plot du
+            pldu = plot(tporig, du[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
+            plot!(tporig, y_pred[i,:], lc=:red, label="predicted")
+
+            # combine
+            push!(pp, plot(plu,pldu, layout = (1,2)))
+        end
+
+        pplot = plot(pp...; size = default(:size) .* (2,14), layout=(14,2), dpi = 600, margin=10mm)
+        savefig(pplot, folderN*"tmp.pdf")
+        append_pdf!(folderN*"simulated.pdf", folderN*"tmp.pdf", create=true, cleanup=true)
+        counter += chunkSize
     end
-    pplot = plot(pp...; size = default(:size) .* (2,Int(ceil(s/2))), layout=(Int(ceil(s/2)),2), dpi = 600, margin=10mm)
-    savefig(pplot, folderN*"residuals_kernel.pdf")
+
+end
+
+
+# ----- simulated data - repeats -----
+function diagnostics_and_save_NN_sim_multi(tstates, ypreds, ppreds, losses, ma=false, steps=50)
+
+    du = du_intps_d
+    nr = length(tstates)
+    mt = length(tporig)
+    tp_ypred = tporig
+
+    pal = palette(:bamako, nr+1)
+
+    # ----- loss
+    print("loss....\n")
+
+    ls = plot(losses[1], title="training loss", #ylim = (0,maximum(losses[1])*1.5),
+    xlabel="epoch", ylabel="loss", label="rep_1", lc=pal[1], dpi=600)
+    for ii in 2:nr
+        plot!(losses[ii], col=pal[ii], label="rep_"*string(ii))
+    end
+    savefig(ls, folderN*"loss.png")
+
+
+    # ----- parameters -----
+    # pinfs = []
+    # for ii in 1:nr
+    #     push!(pinfs, tstates[ii].parameters)
+    # end
+    # pinf = mapreduce(permutedims, vcat, pinfs)
+    pinf = mapreduce(permutedims, vcat, ppreds)
+    μ_pinf, q25_pinf, q75_pinf = get_my_quantiles(pinf, nothing, 1, true)
+    ribbon_pinf = (q75_pinf .- q25_pinf) ./ 2
+
+    print("\nnegative parameters:\n")
+    print(paramNames[vec(μ_pinf) .< 0])
+    print("\n")
+
+    # ----- plot metrics -----
+    sc = scatter(p0, μ_pinf', yerror = ribbon_pinf,
+    legend=false, title="parameters", mc=:black,
+    # series_annotations = text.(paramNames,p0),
+    xlabel = "true parameter", ylabel = "predicted parameter", xlim = (minimum(pinf)-0.1,maximum(pinf)+0.1), ylim = (minimum(pinf)-0.1,maximum(pinf)+0.1), dpi=600)
+    Plots.abline!(sc, 1, 0, line=:dash, lc=:black)
+
+    pl1 = plot(sc, ls, layout=(1,2))
+    savefig(pl1, folderN*"training_metrics.png")
+
+
+    # ---- simulate ODE with parameters -----
+    # more fine-grained time steps
+    if ma
+        # inferred parameters
+        tps = collect(range(0.0,tspan[2],steps))
+        problem = ODEProblem(massaction_stable, x0, tspan, vec(μ_pinf))
+        integ = solve(problem, TRBDF2(), saveat=tps)
+        integu = mapreduce(permutedims, vcat, integ.u)
+
+        # real parameters
+        problemx = ODEProblem(massaction_stable, x0, tspan, p0)
+        intex = solve(problemx, TRBDF2(), saveat=tps)
+        integx = mapreduce(permutedims, vcat, intex.u)
+
+    end
+
+    # ----- plot -----
+    # du with correct parameters
+    if ma
+        m = exp.(A*log.(X'.+eps))
+        ducorrect = N*Diagonal(p0)*m
+    end
+    
+    # predicted du
+    YPREDU = reshape(mapreduce(permutedims, vcat, ypreds), length(tp_ypred), nr, s)
+    YPREDU_μ, YPREDU_q25, YPREDU_q75 = get_my_quantiles(YPREDU, length(tp_ypred), 2)
+    
+    # actual plot
+    rm(folderN*"simulated.pdf", force=true, recursive=true)
+    chunkSize = 28
+    counter = 1
+
+    while counter <= s
+        pp = []
+        if counter+chunkSize-1 > s
+            en = s
+        else
+            en = counter+chunkSize-1
+        end
+        print(en)
+
+        for i in counter:en
+            ribbon_ypredu = (YPREDU_q75[i,:] - YPREDU_q25[i,:]) ./ 2
+
+            # plot u
+            plu = plot(tporig, u[i,:], lc=:black, title = species[i], label="kernel est", xlabel = "digestion time [hrs]", ylabel = "u", dpi=600, margin=5mm)
+            plot!(tporig, X[:,i], lc=:green, label="ground truth")
+            if ma
+                plot!(tps, integu[:,i], lc=:red, label="predicted")
+                plot!(tps, integx[:,i], lc=:blue, label="real par")
+            end
+
+            # plot du
+            pldu = plot(tp_ypred, du[i,:], lc=:orange, title = species[i], label="interp", xlabel = "digestion time [hrs]", ylabel = "du", dpi=600, margin=5mm)
+            plot!(tp_ypred, YPREDU_μ[i,:], ribbon=ribbon_ypredu, fillalpha=0.3, lc=:red, label="predicted")
+            if ma
+                plot!(tporig, ducorrect[i,:], lc=:blue, label="real par")
+            end
+
+            # combine
+            push!(pp, plot(plu,pldu, layout = (1,2)))
+        end
+
+        pplot = plot(pp...; size = default(:size) .* (2,14), layout=(14,2), dpi = 600, margin=10mm)
+        savefig(pplot, folderN*"tmp.pdf")
+        append_pdf!(folderN*"simulated.pdf", folderN*"tmp.pdf", create=true, cleanup=true)
+        counter += chunkSize
+    end
 
 end
 
@@ -62,6 +214,7 @@ end
 function diagnostics_and_save_NN(tstates, ypreds, losses, loss_only=false, blackbox=false, steps=10)
 
     pal = palette(:bamako, nr+1)
+    dus = du_intps_d
 
     # ----- loss
     print("loss....\n")
