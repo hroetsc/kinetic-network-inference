@@ -11,14 +11,20 @@ theme_set(theme_classic())
 dir.create("data/simulation/", showWarnings = F, recursive = T)
 
 # ----- INPUT -----
-reactions = read.csv("data/simulation/Ex2.csv", stringsAsFactors = F)
-
-k = reactions$rate
+reactions = read.csv("data/simulation/Ex3.csv", stringsAsFactors = F)
+reactions = reactions %>%
+    dplyr::mutate(rate_name_ma = paste0("on_",reaction_ID),
+                  rate_name_vmax = paste0("Vmax_",reaction_ID),
+                  rate_name_km = paste0("Km_",reaction_ID))
 
 # time points
 tpoints = seq(0,4,0.01)
 tpoints_coarse = seq(0,4,1)
 
+set.seed(42)
+rate_ma = runif(nrow(reactions), 0, 1)
+rate_vmax = runif(nrow(reactions), 0, 10)
+rate_km = runif(nrow(reactions), 0, 0.5)
 
 # ----- build stochiometry matrix from adjacency list -----
 species = c(reactions$reactant1, reactions$reactant1, reactions$product1, reactions$product2) %>%
@@ -44,39 +50,58 @@ for (r in 1:nrow(reactions)) {
 }
 
 colnames(A) = species
-rownames(A) = reactions$rate_name
+rownames(A) = reactions$reaction_ID
 
 colnames(B) = species
-rownames(B) = reactions$rate_name
+rownames(B) = reactions$reaction_ID
 
 
 # ----- simulate ODE -----
 massAction <- function(t,X,p) {
   
-  # rates as diagonal matrix
-  K = diag(k,r,r)
   # vector matrix exponentiation of x by A
   M = apply(t(X^t(A)), 1, prod)
   # calculate dX
-  dX = t(B-A)%*%(k*M)
+  dX = t(B-A)%*%(p*M)
   
   list(dX)
 }
 
+michaelisMenten <- function(t,X,p) {
+
+  # vector matrix exponentiation of x by A
+  m = apply(t(X^t(A)), 1, prod)
+
+  Vmax = p[1:r]
+  Km = p[(r+1):(2*r)]
+  # calculate dX
+  dX = t(B-A)%*%((Vmax*m) / (Km+m))
+  
+  list(dX)
+}
+
+
 names(x0) = species
-names(k) = reactions$rate_name
 
-out <- ode(func = massAction,
-            y = x0,
-            parms = k,
-            times = tpoints)
+names(rate_ma) = reactions$rate_name_ma
+names(rate_vmax) = reactions$rate_name_vmax
+names(rate_km) = reactions$rate_name_km
 
 
+out_MA <- ode(func = massAction,
+              y = x0,
+              parms = rate_ma,
+              times = tpoints)
+
+out_MM <- ode(func = michaelisMenten,
+              y = x0,
+              parms = c(rate_vmax,rate_km),
+              times = tpoints)
 
 # ----- plot -----
 cols = rainbow(n = s)
 
-plot_out = out %>%
+plot_ma = out_MA %>%
   as_tibble() %>%
   tidyr::gather(variable,value,-time) %>%
   ggplot(aes(x=time,y=value,color=variable))+
@@ -84,18 +109,33 @@ plot_out = out %>%
   scale_color_manual(values = cols, "component") +
   xlim(c(0,4)) +
   labs(x='time (h)',y='concentration') + 
-  ggtitle("simulated kinetics")
-plot_out
+  ggtitle("simulated kinetics - mass action") +
+  theme(legend.position = "none")
+plot_ma
 
-ggsave("data/simulation/Ex2.png",
-       plot = plot_out, height = 4, width = 5, dpi = "retina")
+ggsave("data/simulation/Ex3_MA.png",
+       plot = plot_ma, height = 4, width = 5, dpi = "retina")
 
+
+plot_mm = out_MM %>%
+  as_tibble() %>%
+  tidyr::gather(variable,value,-time) %>%
+  ggplot(aes(x=time,y=value,color=variable))+
+  geom_line(linewidth=1.5)+
+  scale_color_manual(values = cols, "component") +
+  xlim(c(0,4)) +
+  labs(x='time (h)',y='concentration') + 
+  ggtitle("simulated kinetics - michaelis menten") +
+  theme(legend.position = "none")
+plot_mm
+
+ggsave("data/simulation/Ex3_MM.png",
+       plot = plot_ma, height = 4, width = 5, dpi = "retina")
 
 # ----- OUTPUT -----
-X = out %>% as.matrix()
+X = out_MA %>% as.matrix()
 X = X[X[,1] %in% tpoints_coarse, species]
-
-DATA = list(X = X[,species],
+DATA_MA = list(X = X[,species],
             x0 = X[1,species],
             A = A[reactions$rate_name,species],
             B = B[reactions$rate_name,species],
@@ -103,7 +143,17 @@ DATA = list(X = X[,species],
             species = species,
             reactions = reactions$rate_name,
             info = reactions)
+save(DATA_MA, file = "data/simulation/Ex3_MA_DATA.RData")
 
-save(DATA, file = "data/simulation/Ex2_DATA.RData")
 
-
+X = out_MM %>% as.matrix()
+X = X[X[,1] %in% tpoints_coarse, species]
+DATA_MA = list(X = X[,species],
+            x0 = X[1,species],
+            A = A[reactions$rate_name,species],
+            B = B[reactions$rate_name,species],
+            tp = tpoints_coarse,
+            species = species,
+            reactions = reactions$rate_name,
+            info = reactions)
+save(DATA_MM, file = "data/simulation/Ex3_MM_DATA.RData")
