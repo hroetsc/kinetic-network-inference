@@ -184,7 +184,9 @@ constructGraphNetwork <- function(DB, numCPU, Nmin, Nmax) {
     reactant_valid = pcp$validLength[i]
     
     # get all possible cleavage sites
-    cleave = seq(1,N-1)
+    # cleave = seq(1,N-1)
+    # within 1-2 aa cleavage
+    cleave = unique(c(1,2,N-2,N-1))
 
     # get products resulting from cleavage of current PCP
     # iterate all coordinates of current reactant sequence

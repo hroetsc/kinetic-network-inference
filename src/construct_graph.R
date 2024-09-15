@@ -2,6 +2,7 @@
 # description:  get graph of non-spliced and spliced peptides for rate inference
 # author:       HPR
 
+# renv::init()
 library(data.table)
 library(dplyr)
 library(stringr)
@@ -136,5 +137,5 @@ DATA = list(A = A,
             finalK = finalK,
             pepTbl = pepTbl)
 
-save(DATA, file = paste0("results/graphs/",protein_name,"_v6-MA.RData"))
+save(DATA, file = paste0("results/graphs/",protein_name,"_v8-MA.RData"))
 

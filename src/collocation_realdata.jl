@@ -34,7 +34,7 @@ Random.seed!(42)
 print(Threads.nthreads())
 
 protein_name = "IDH1_WT"
-OUTNAME = "nn_v9_spline+ki"
+OUTNAME = "nn_new_v4_act"
 folderN = "results/collocation/"*protein_name*"/"*OUTNAME*"/"
 mkpath(folderN)
 
@@ -43,7 +43,7 @@ h = 0.501
 
 
 # ----- INPUT -----
-R"load(paste0('results/graphs/IDH1_WT_v6-MA.RData'))" # TODO: make protein_name variable
+R"load(paste0('results/graphs/IDH1_WT_v7-MA.RData'))" # TODO: make protein_name variable
 @rget DATA;
 
 X = Array{Union{Missing,Float64}}(DATA[:S])
@@ -190,11 +190,20 @@ end
 
 # ----- training functions -----
 function loss_function(model, ps, st, data)
-    ki = data[3] # index with no missing values
-    ypred, st = Lux.apply(model, data[1], ps, st)
-    mse_loss = sqrt(mean(abs2, vec(ypred)[ki] .- vec(data[2])[ki]))
-    # sls_loss = sum(abs2, y_pred .- data[2])
-    return mse_loss, st, ()
+    
+    # -- informed model
+    # ypred, st = Lux.apply(model, data[1], ps, st)
+    # ki = data[4] # index with no missing values
+    # mse_loss = sqrt(mean(abs2, vec(ypred)[ki] .- vec(data[2])[ki]))
+    
+    # -- black box model
+    ppred, st = Lux.apply(model, data[1], ps, st)
+    m = exp.(A*log.(data[2].+eps))
+    ypred = N*Diagonal(ppred)*m
+    loss = mean(abs2, vec(ypred) .- vec(data[3]))
+    # loss = -1*cor(vec(ypred), vec(data[3]))
+
+    return loss, st, ()
 end
 
 function main(tstate::Lux.Experimental.TrainState, vjp, data, epochs)
@@ -214,28 +223,48 @@ end
 
 
 # ----- train and predict -----
-model = Chain(MALayer(;dims=nP))
-# model = Lux.Chain(Lux.Dense(s => 1), Lux.Dense(1 => s))
+# -- informed model
+# model = Chain(MALayer(;dims=nP))
+# -- blackbox model
+in_dim = 100
+hidden_dim = 1000
+model = Lux.Chain(Lux.Dense(in_dim => hidden_dim, relu), Lux.Dense(hidden_dim => nP, relu))
+
 rng = MersenneTwister(42)
 opt = Optimisers.Adam(0.0001)
 
 # epochs = 100000
 epochs = 1000
+
+
 dev_cpu = cpu_device()
 dev_gpu = gpu_device()
 
 tstates = []
 losses = []
 ypreds = []
+ppreds = []
 
 for ii in 1:nr
+    print("\n"*string(ii)*"\n")
+
     # initialise and train
+    # p0s = rand(Gamma(1,1), in_dim)
+    p0s = rand(in_dim)
+    
     tstate = Lux.Experimental.TrainState(rng, model, opt)
     vjp_rule = AutoZygote()
 
-    tstate, loss = @time main(tstate, vjp_rule, (Xn0[:,:,ii]', du_intps_d[ii], kis[ii]), epochs)
-    ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(Xn0[:,:,ii]'), tstate.parameters, tstate.states)[1])
-    
+    # -- informed model
+    # tstate, loss = @time main(tstate, vjp_rule, (Xn0[:,:,ii]', du_intps_d[ii], kis[ii]), epochs)
+    # ypred = dev_cpu(Lux.apply(tstate.model, dev_gpu(Xn0[:,:,ii]'), tstate.parameters, tstate.states)[1])
+    # -- black box model
+    # for blackbox model: calculate dx
+    tstate, loss = @time main(tstate, vjp_rule, (p0s, Xn0[:,:,ii]', du_intps_d[ii], kis[ii]), epochs)
+    ppred = dev_cpu(Lux.apply(tstate.model, dev_gpu(p0s), tstate.parameters, tstate.states)[1])
+    m = exp.(A*log.(Xn0[:,:,ii]'.+eps))
+    ypred = N*Diagonal(ppred)*m
+
     # save train state and predictions
     save_object(folderN*"tstate_rep"*string(ii)*".jld2", tstate)
     ypreddf = DataFrame(ypred, [:ypred0, :ypred1, :ypred2, :ypred3, :ypred4])
@@ -247,28 +276,33 @@ for ii in 1:nr
     push!(tstates,tstate)
     push!(losses,loss)
     push!(ypreds, ypred)
+    push!(ppreds, ppred)
 end
 
 # -- no blackbox
-diagnostics_and_save_NN(tstates, ypreds, losses, false)
+diagnostics_and_save_NN(tstates, ypreds, losses, false, true)
 
 # -- blackbox
 # diagnostics_and_save_NN(tstates, ypreds, losses, false, true)
-# heatmap(tstates[1].parameters[1][1])
-# heatmap(tstates[1].parameters[2][1])
+heatmap(tstates[1].parameters[1][1])
+heatmap(tstates[1].parameters[2][1])
+
+pinf = mapreduce(permutedims, vcat, ppreds)
+pdist = boxplot(pinf, palette = :bamako, legend=false, title="parameters", xlabel="parameter #", ylabel="parameter value", size = default(:size) .* (10,10))
+savefig(pdist, folderN*"parameters.pdf")
 
 # ----- get output and save -----
-info[!, :param_1] = tstates[1].parameters[1:r]
-info[!, :param_2] = tstates[2].parameters[1:r]
-info[!, :param_3] = tstates[3].parameters[1:r]
-CSV.write(folderN*"parameters.csv", info)
+# info[!, :param_1] = tstates[1].parameters[1:r]
+# info[!, :param_2] = tstates[2].parameters[1:r]
+# info[!, :param_3] = tstates[3].parameters[1:r]
+# CSV.write(folderN*"parameters.csv", info)
 
-bias = DataFrame([tstates[1].parameters[r+1:r+s],
-            tstates[2].parameters[r+1:r+s],
-            tstates[3].parameters[r+1:r+s],
-            species],
-        [:b_1, :b_2, :b_3, :species])
-CSV.write(folderN*"bias.csv", bias)
+# bias = DataFrame([tstates[1].parameters[r+1:r+s],
+#             tstates[2].parameters[r+1:r+s],
+#             tstates[3].parameters[r+1:r+s],
+#             species],
+#         [:b_1, :b_2, :b_3, :species])
+# CSV.write(folderN*"bias.csv", bias)
 
 
 # # # -----------------------------
